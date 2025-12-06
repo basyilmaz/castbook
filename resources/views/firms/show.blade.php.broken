@@ -1,0 +1,275 @@
+@extends('layouts.app')
+
+@php
+    use App\Support\Format;
+
+    $currentPrice = $firm->priceForDate(now());
+    $balance = $firm->balance;
+@endphp
+
+@section('content')
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-3 gap-3">
+    <div>
+        <h4 class="mb-0">{{ $firm->name }}</h4>
+        <small class="text-muted">Firma detaylarÃƒâ€Ã‚Â±, fiyat geÃƒÆ’Ã‚Â§miŞÃ…Â¸i ve cari hareketler</small>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <form action="{{ route('firms.sync-invoices', $firm) }}" method="POST">
+            @csrf
+            <button type="submit" class="btn btn-sm btn-outline-warning">
+                GeÃƒÆ’Ã‚Â§miŞÃ…Â¸ BorÃƒÆ’Ã‚Â§larÃƒâ€Ã‚Â± Senkronize Et
+            </button>
+        </form>
+        <a href="{{ route('invoices.create', ['firm_id' => $firm->id]) }}" class="btn btn-sm btn-outline-primary">
+            Fatura OluŞÃ…Â¸tur
+        </a>
+        <a href="{{ route('payments.create', ['firm_id' => $firm->id]) }}" class="btn btn-sm btn-outline-success">
+            Tahsilat Ekle
+        </a>
+        <a href="{{ route('firms.edit', $firm) }}" class="btn btn-sm btn-secondary">
+            DÃƒÆ’Ã‚Â¼zenle
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-3 col-sm-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <small class="text-muted text-uppercase">GeÃƒÆ’Ã‚Â§erli AylÃƒâ€Ã‚Â±k ÃƒÆ’Ã…â€œcret</small>
+                <div class="h4 mb-0">{{ Format::money($currentPrice) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <small class="text-muted text-uppercase">SÃƒÆ’Ã‚Â¶zleŞÃ…Â¸me BaŞÃ…Â¸langÃƒâ€Ã‚Â±ÃƒÆ’Ã‚Â§</small>
+                <div class="h4 mb-0">{{ $firm->contract_start_at?->format('d.m.Y') ?? '-' }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <small class="text-muted text-uppercase">Son Senkron</small>
+                <div class="h6 mb-0">{{ $firm->initial_debt_synced_at?->format('d.m.Y H:i') ?? 'HenÃƒÆ’Ã‚Â¼z ÃƒÆ’Ã‚Â§alÃƒâ€Ã‚Â±ŞÃ…Â¸tÃƒâ€Ã‚Â±rÃƒâ€Ã‚Â±lmadÃƒâ€Ã‚Â±' }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <small class="text-muted text-uppercase">GÃƒÆ’Ã‚Â¼ncel Bakiye</small>
+                <div class="h4 mb-0 {{ $balance > 0 ? 'text-danger' : ($balance < 0 ? 'text-success' : '') }}">
+                    {{ Format::money($balance) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">Ãƒâ€Ã‚Â°letiŞÃ…Â¸im Bilgileri</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5 text-muted">Vergi No</dt>
+                    <dd class="col-7">{{ $firm->tax_no ?? '-' }}</dd>
+
+                    <dt class="col-5 text-muted">Yetkili</dt>
+                    <dd class="col-7">{{ $firm->contact_person ?? '-' }}</dd>
+
+                    <dt class="col-5 text-muted">E-Posta</dt>
+                    <dd class="col-7">{{ $firm->contact_email ?? '-' }}</dd>
+
+                    <dt class="col-5 text-muted">Telefon</dt>
+                    <dd class="col-7">{{ $firm->contact_phone ?? '-' }}</dd>
+
+                    <dt class="col-5 text-muted">Durum</dt>
+                    <dd class="col-7">
+                        <span class="badge bg-{{ $firm->status === 'active' ? 'success' : 'secondary' }}">
+                            {{ $firm->status === 'active' ? 'Aktif' : 'Pasif' }}
+                        </span>
+                    </dd>
+                </dl>
+                @if ($firm->notes)
+                    <hr>
+                    <h6 class="text-muted text-uppercase small">Notlar</h6>
+                    <p class="mb-0">{{ $firm->notes }}</p>
+                @endif
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Fiyat GeÃƒÆ’Ã‚Â§miŞÃ…Â¸i</h6>
+                <small class="text-muted">Zam dÃƒÆ’Ã‚Â¶nemlerini yÃƒÆ’Ã‚Â¶netin</small>
+            </div>
+            <div class="card-body">
+                <form action="{{ route('firms.price-histories.store', $firm) }}" method="POST" class="row g-2 align-items-end mb-3">
+                    @csrf
+                    <div class="col-6">
+                        <label class="form-label">BaŞÃ…Â¸langÃƒâ€Ã‚Â±ÃƒÆ’Ã‚Â§ Tarihi</label>
+                        <input type="date" name="valid_from" value="{{ old('valid_from', now()->format('Y-m-d')) }}"
+                               class="form-control @error('valid_from') is-invalid @enderror" required>
+                        @error('valid_from')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">ÃƒÆ’Ã…â€œcret (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Âº)</label>
+                        <input type="number" step="0.01" min="0" name="amount" value="{{ old('amount', $firm->monthly_fee) }}"
+                               class="form-control @error('amount') is-invalid @enderror" required>
+                        @error('amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-12 d-grid">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Fiyat DÃƒÆ’Ã‚Â¶nemi Ekle</button>
+                    </div>
+                </form>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>BaŞÃ…Â¸langÃƒâ€Ã‚Â±ÃƒÆ’Ã‚Â§</th>
+                                <th class="text-end">ÃƒÆ’Ã…â€œcret</th>
+                                <th class="text-end">Ãƒâ€Ã‚Â°ŞÃ…Â¸lem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($firm->priceHistories as $history)
+                                <tr>
+                                    <td>{{ $history->valid_from?->format('d.m.Y') }}</td>
+                                    <td class="text-end">{{ Format::money($history->amount) }}</td>
+                                    <td class="text-end">
+                                        <form action="{{ route('firms.price-histories.destroy', [$firm, $history]) }}" method="POST"
+                                              onsubmit="return confirm('Bu fiyat kaydÃƒâ€Ã‚Â±nÃƒâ€Ã‚Â± silmek istediÃƒâ€Ã…Â¸inize emin misiniz?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-2">TanÃƒâ€Ã‚Â±mlÃƒâ€Ã‚Â± fiyat geÃƒÆ’Ã‚Â§miŞÃ…Â¸i bulunmuyor.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        @include('firms._tax_forms_section')
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">Hesap Ekstresi</h6>
+            </div>
+            <div class="card-body">
+                <form action="{{ route('firms.statement', $firm) }}" method="POST" class="row g-3">
+                    @csrf
+                    <div class="col-sm-6">
+                        <label class="form-label">BaŞÃ…Â¸langÃƒâ€Ã‚Â±ÃƒÆ’Ã‚Â§</label>
+                        <input type="date" name="start_date" value="{{ old('start_date', now()->startOfMonth()->format('Y-m-d')) }}"
+                               class="form-control @error('start_date') is-invalid @enderror" required>
+                        @error('start_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label">BitiŞÃ…Â¸</label>
+                        <input type="date" name="end_date" value="{{ old('end_date', now()->format('Y-m-d')) }}"
+                               class="form-control @error('end_date') is-invalid @enderror" required>
+                        @error('end_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-sm-12">
+                        <label class="form-label">GÃƒÆ’Ã‚Â¶nderim E-postasÃƒâ€Ã‚Â±</label>
+                        <input type="email" name="send_to" value="{{ old('send_to', $firm->contact_email) }}"
+                               class="form-control @error('send_to') is-invalid @enderror" placeholder="E-posta (opsiyonel)">
+                        @error('send_to')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-sm-12 d-flex gap-2 justify-content-sm-end">
+                        <button type="submit" name="action" value="download" class="btn btn-outline-secondary">
+                            <i class="bi bi-file-earmark-pdf me-1"></i> PDF Ãƒâ€Ã‚Â°ndir
+                        </button>
+                        <button type="submit" name="action" value="email" class="btn btn-outline-primary">
+                            <i class="bi bi-envelope-at me-1"></i> E-posta GÃƒÆ’Ã‚Â¶nder
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Cari Hareketler</h6>
+                <small class="text-muted">Toplam {{ $firm->transactions->count() }} kayÃƒâ€Ã‚Â±t</small>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded text-center">
+                            <div class="text-muted text-uppercase small">Toplam BorÃƒÆ’Ã‚Â§</div>
+                            <div class="h5 text-danger mb-0">{{ Format::money($debitTotal) }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded text-center">
+                            <div class="text-muted text-uppercase small">Toplam Tahsilat</div>
+                            <div class="h5 text-success mb-0">{{ Format::money($creditTotal) }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                @if ($firm->transactions->isEmpty())
+                    <p class="text-center text-muted mb-0">HenÃƒÆ’Ã‚Â¼z hareket bulunmuyor.</p>
+                @else
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tarih</th>
+                                    <th>AÃƒÆ’Ã‚Â§Ãƒâ€Ã‚Â±klama</th>
+                                    <th>Tip</th>
+                                    <th class="text-end">Tutar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($firm->transactions as $transaction)
+                                    <tr>
+                                        <td>{{ $transaction->date?->format('d.m.Y') }}</td>
+                                        <td>
+                                            {{ $transaction->description }}
+                                            @if ($transaction->sourceable)
+                                                <span class="badge bg-light text-dark ms-2">
+                                                    {{ class_basename($transaction->sourceable) }} #{{ $transaction->sourceable->id }}
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ $transaction->type === 'debit' ? 'danger' : 'success' }}">
+                                                {{ $transaction->type === 'debit' ? 'BorÃƒÆ’Ã‚Â§' : 'Alacak' }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="{{ $transaction->type === 'debit' ? 'text-danger' : 'text-success' }}">
+                                                {{ $transaction->type === 'debit' ? '+' : '-' }}
+                                                {{ Format::money($transaction->amount) }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+@endsection

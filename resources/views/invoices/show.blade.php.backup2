@@ -1,0 +1,161 @@
+@extends('layouts.app')
+
+@php
+    use App\Support\Format;
+
+    $paidTotal = (float) ($invoice->payments_sum_amount ?? $invoice->payments->sum('amount'));
+    $remaining = max(0, (float) $invoice->amount - $paidTotal);
+    $statusMeta = match ($invoice->status) {
+        'paid' => ['label' => 'Ödendi', 'class' => 'success'],
+        'partial' => ['label' => 'Kısmi ödeme', 'class' => 'warning text-dark'],
+        'cancelled' => ['label' => 'İptal', 'class' => 'secondary'],
+        default => ['label' => 'Ödenmedi', 'class' => 'danger'],
+    };
+@endphp
+
+@section('content')
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0">Fatura #{{ $invoice->id }}</h4>
+        <small class="text-muted">{{ $invoice->firm->name }}</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ route('payments.create', ['invoice_id' => $invoice->id, 'firm_id' => $invoice->firm_id]) }}"
+           class="btn btn-sm btn-outline-success">
+            Tahsilat Kaydet
+        </a>
+        @if (! in_array($invoice->status, ['paid', 'partial'], true))
+            <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-secondary">Düzenle</a>
+        @endif
+        <a href="{{ route('invoices.index') }}" class="btn btn-sm btn-light">Listeye Dön</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="text-muted text-uppercase small">Durum</span>
+                    <span class="badge bg-{{ $statusMeta['class'] }}">{{ $statusMeta['label'] }}</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted d-block">Fatura Tarihi</small>
+                    <span class="fw-semibold">{{ $invoice->date?->format('d.m.Y') ?? '-' }}</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted d-block">Vade Tarihi</small>
+                    <span class="fw-semibold">{{ $invoice->due_date?->format('d.m.Y') ?? '-' }}</span>
+                </div>
+                <hr>
+                <div class="mb-2">
+                    <small class="text-muted d-block">Resmi Fatura No</small>
+                    <span class="fw-semibold">{{ $invoice->official_number ?? '-' }}</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted d-block">Fatura TutarÃƒâ€Ã‚Â±</small>
+                    <span class="h5 mb-0">{{ Format::money($invoice->amount) }}</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted d-block">ÃƒÆ’Ã¢â‚¬â€œdenen</small>
+                    <span class="fw-semibold text-success">{{ Format::money($paidTotal) }}</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted d-block">Kalan</small>
+                    <span class="fw-semibold {{ $remaining > 0 ? 'text-danger' : 'text-muted' }}">
+                        {{ Format::money($remaining) }}
+                    </span>
+                </div>
+                <hr>
+                <div class="mb-2">
+                    <small class="text-muted d-block">AÃƒÆ’Ã‚Â§Ãƒâ€Ã‚Â±klama</small>
+                    <span>{{ $invoice->description ?? '-' }}</span>
+                </div>
+                <div class="mb-0">
+                    <small class="text-muted d-block">ÃƒÆ’Ã¢â‚¬â€œdeme Tarihi</small>
+                    <span>{{ $invoice->paid_at?->format('d.m.Y H:i') ?? '-' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        {{-- Fatura Kalemleri --}}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Fatura Kalemleri</h6>
+                <small class="text-muted">{{ $invoice->lineItems->count() }} kalem</small>
+            </div>
+            <div class="card-body p-0">
+                @if ($invoice->lineItems->isEmpty())
+                    <p class="text-center text-muted py-4 mb-0">Fatura kalemi bulunmuyor.</p>
+                @else
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Açıklama</th>
+                                    <th class="text-center">Miktar</th>
+                                    <th class="text-end">Birim Fiyat</th>
+                                    <th class="text-end">Tutar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($invoice->lineItems as $item)
+                                    <tr>
+                                        <td>{{ $item->description }}</td>
+                                        <td class="text-center">{{ $item->quantity }}</td>
+                                        <td class="text-end">{{ Format::money($item->unit_price) }}</td>
+                                        <td class="text-end fw-semibold">{{ Format::money($item->amount) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="3" class="text-end fw-semibold">Toplam:</td>
+                                    <td class="text-end fw-bold">{{ Format::money($invoice->amount) }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- Tahsilatlar --}}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Tahsilatlar</h6>
+                <small class="text-muted">{{ $invoice->payments->count() }} kayıt</small>
+            </div>
+            <div class="card-body p-0">
+                @if ($invoice->payments->isEmpty())
+                    <p class="text-center text-muted py-4 mb-0">Bu faturaya bağlı tahsilat bulunmuyor.</p>
+                @else
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tarih</th>
+                                    <th>Yöntem</th>
+                                    <th class="text-end">Tutar</th>
+                                    <th>Not</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($invoice->payments as $payment)
+                                    <tr>
+                                        <td>{{ $payment->date?->format('d.m.Y') }}</td>
+                                        <td>{{ $payment->method ?? '-' }}</td>
+                                        <td class="text-end">{{ Format::money($payment->amount) }}</td>
+                                        <td>{{ $payment->note ?? '-' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+@endsection

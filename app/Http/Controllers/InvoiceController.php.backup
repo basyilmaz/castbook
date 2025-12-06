@@ -1,0 +1,378 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Firm;
+use App\Models\Invoice;
+use App\Models\InvoiceExtraField;
+use App\Models\Setting;
+use App\Services\InvoiceGenerationService;
+use App\Support\Format;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+
+class InvoiceController extends Controller
+{
+    public function index(Request $request): View
+    {
+        $filters = $request->only(['status', 'firm_id', 'date_from', 'date_to', 'per_page']);
+        $perPage = (int) ($filters['per_page'] ?? 10);
+
+        if (! in_array($perPage, [10, 20, 50, 100], true)) {
+            $perPage = 10;
+        }
+
+        $filters['per_page'] = $perPage;
+
+        $invoices = Invoice::query()
+            ->with('firm:id,name')
+            ->withSum('payments', 'amount')
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($filters['firm_id'] ?? null, fn ($query, $firmId) => $query->where('firm_id', $firmId))
+            ->when($filters['date_from'] ?? null, function ($query, $from) {
+                try {
+                    $start = Carbon::createFromFormat('Y-m-d', $from)->startOfDay();
+                } catch (\Throwable $exception) {
+                    return;
+                }
+
+                $query->where('date', '>=', $start);
+            })
+            ->when($filters['date_to'] ?? null, function ($query, $to) {
+                try {
+                    $end = Carbon::createFromFormat('Y-m-d', $to)->endOfDay();
+                } catch (\Throwable $exception) {
+                    return;
+                }
+
+                $query->where('date', '<=', $end);
+            })
+            ->latest('date')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $firms = Firm::orderBy('name')->get(['id', 'name']);
+
+        return view('invoices.index', [
+            'invoices' => $invoices,
+            'firms' => $firms,
+            'filters' => $filters,
+            'perPage' => $perPage,
+        ]);
+    }
+
+    public function create(Request $request): View
+    {
+        $firms = Firm::active()->orderBy('name')->get(['id', 'name', 'monthly_fee']);
+        $invoiceDate = Carbon::now()->startOfMonth();
+        $dueDays = (int) Setting::getValue('invoice_default_due_days', 10);
+
+        $invoice = new Invoice([
+            'date' => $invoiceDate,
+            'due_date' => $dueDays > 0 ? $invoiceDate->copy()->addDays($dueDays) : $invoiceDate->copy()->addDays(10),
+            'amount' => 0,
+            'description' => Setting::getValue('invoice_default_description', ''),
+        ]);
+
+        $prefillFirmId = $request->integer('firm_id') ?: old('firm_id');
+        $extraFields = collect();
+
+        if ($prefillFirmId) {
+            $firm = $firms->firstWhere('id', $prefillFirmId) ?? Firm::find($prefillFirmId);
+            if ($firm) {
+                $invoice->amount = $firm->priceForDate($invoiceDate);
+            }
+
+            $extraFields = InvoiceExtraField::query()
+                ->where('firm_id', $prefillFirmId)
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->get();
+        }
+
+        return view('invoices.create', compact('invoice', 'firms', 'prefillFirmId', 'extraFields'));
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $firmId = $request->input('firm_id');
+
+        $extraFields = InvoiceExtraField::query()
+            ->where('firm_id', $firmId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        $data = $this->validatedData($request, null, $extraFields);
+
+        $firm = Firm::find($data['firm_id']);
+        $invoiceDate = Carbon::parse($data['date']);
+        $expectedAmount = $firm?->priceForDate($invoiceDate) ?? 0.0;
+
+        if (($data['amount'] ?? 0) <= 0 && $expectedAmount > 0) {
+            $data['amount'] = $expectedAmount;
+        }
+
+        $invoice = Invoice::create($data);
+
+        $description = $invoice->description ?: 'Aylık muhasebe ücreti';
+
+        // Line item oluştur
+        $invoice->lineItems()->create([
+            'description' => $description,
+            'quantity' => 1,
+            'unit_price' => $invoice->amount,
+            'amount' => $invoice->amount,
+            'sort_order' => 0,
+            'item_type' => 'extra',
+        ]);
+
+        $invoice->transactions()->create([
+            'firm_id' => $invoice->firm_id,
+            'type' => 'debit',
+            'amount' => $invoice->amount,
+            'date' => $invoice->date,
+            'description' => $description,
+        ]);
+
+        $this->syncExtraValues($invoice, $extraFields, $data['extra_fields'] ?? []);
+
+        $redirect = redirect()
+            ->route('invoices.show', $invoice)
+            ->with('status', 'Fatura oluÃƒâ€¦Ã…Â¸turuldu ve cari borÃƒÆ’Ã‚Â§ kaydedildi.');
+
+        if ($expectedAmount > 0 && abs($expectedAmount - $invoice->amount) > 0.01) {
+            $redirect->with('warning', 'UyarÃƒâ€Ã‚Â±: Bu tarih iÃƒÆ’Ã‚Â§in standart ÃƒÆ’Ã‚Â¼cret ' . Format::money($expectedAmount) . '.');
+        }
+
+        return $redirect;
+    }
+
+    public function show(Invoice $invoice): View
+    {
+        $invoice->loadSum('payments', 'amount');
+        $invoice->loadMissing(['firm', 'payments', 'extraValues.field', 'lineItems']);
+
+        return view('invoices.show', compact('invoice'));
+    }
+
+    public function edit(Invoice $invoice): View|RedirectResponse
+    {
+        if (in_array($invoice->status, ['paid', 'partial'], true)) {
+            return redirect()->route('invoices.show', $invoice)
+                ->withErrors(['invoice' => 'ÃƒÆ’Ã¢â‚¬â€œdenmiÃƒâ€¦Ã…Â¸ veya kÃƒâ€Ã‚Â±smen ÃƒÆ’Ã‚Â¶denmiÃƒâ€¦Ã…Â¸ faturalar dÃƒÆ’Ã‚Â¼zenlenemez.']);
+        }
+
+        $firms = Firm::orderBy('name')->get(['id', 'name']);
+
+        $extraFields = InvoiceExtraField::query()
+            ->where('firm_id', $invoice->firm_id)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        $invoice->loadMissing('extraValues');
+
+        return view('invoices.edit', compact('invoice', 'firms', 'extraFields'));
+    }
+
+    public function update(Request $request, Invoice $invoice): RedirectResponse
+    {
+        if (in_array($invoice->status, ['paid', 'partial'], true)) {
+            return redirect()->route('invoices.show', $invoice)
+                ->withErrors(['invoice' => 'ÃƒÆ’Ã¢â‚¬â€œdenmiÃƒâ€¦Ã…Â¸ veya kÃƒâ€Ã‚Â±smen ÃƒÆ’Ã‚Â¶denmiÃƒâ€¦Ã…Â¸ faturalar dÃƒÆ’Ã‚Â¼zenlenemez.']);
+        }
+
+        $extraFields = InvoiceExtraField::query()
+            ->where('firm_id', $invoice->firm_id)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        $data = $this->validatedData($request, $invoice, $extraFields);
+
+        $invoice->update($data);
+
+        // Line item güncelle
+        $lineItem = $invoice->lineItems()->first();
+        if ($lineItem) {
+            $lineItem->update([
+                'description' => $invoice->description ?? $lineItem->description,
+                'unit_price' => $invoice->amount,
+                'amount' => $invoice->amount,
+            ]);
+        } else {
+            // Eğer line item yoksa oluştur
+            $invoice->lineItems()->create([
+                'description' => $invoice->description ?? 'Aylık muhasebe ücreti',
+                'quantity' => 1,
+                'unit_price' => $invoice->amount,
+                'amount' => $invoice->amount,
+                'sort_order' => 0,
+                'item_type' => 'extra',
+            ]);
+        }
+
+        $transaction = $invoice->transactions()->first();
+        if ($transaction) {
+            $transaction->update([
+                'amount' => $invoice->amount,
+                'date' => $invoice->date,
+                'description' => $invoice->description ?? $transaction->description,
+            ]);
+        } else {
+            $invoice->transactions()->create([
+                'firm_id' => $invoice->firm_id,
+                'type' => 'debit',
+                'amount' => $invoice->amount,
+                'date' => $invoice->date,
+                'description' => $invoice->description ?? 'Aylık muhasebe ücreti',
+            ]);
+        }
+
+        $expectedAmount = $invoice->firm?->priceForDate(Carbon::parse($invoice->date)) ?? 0.0;
+
+        $redirect = redirect()
+            ->route('invoices.show', $invoice)
+            ->with('status', 'Fatura gÃƒÆ’Ã‚Â¼ncellendi.');
+
+        if ($expectedAmount > 0 && abs($expectedAmount - $invoice->amount) > 0.01) {
+            $redirect->with('warning', 'UyarÃƒâ€Ã‚Â±: Bu tarih iÃƒÆ’Ã‚Â§in standart ÃƒÆ’Ã‚Â¼cret ' . Format::money($expectedAmount) . '.');
+        }
+
+        if ($invoice->payments()->exists()) {
+            $invoice->refreshPaymentStatus();
+        }
+
+        $this->syncExtraValues($invoice, $extraFields, $data['extra_fields'] ?? []);
+
+        return $redirect;
+    }
+
+    public function destroy(Invoice $invoice): RedirectResponse
+    {
+        if (in_array($invoice->status, ['paid', 'partial'], true)) {
+            return redirect()
+                ->route('invoices.show', $invoice)
+                ->withErrors(['invoice' => 'ÃƒÆ’Ã¢â‚¬â€œdenmiÃƒâ€¦Ã…Â¸ veya kÃƒâ€Ã‚Â±smen ÃƒÆ’Ã‚Â¶denmiÃƒâ€¦Ã…Â¸ faturalar silinemez.']);
+        }
+
+        $invoice->transactions()->delete();
+        $invoice->delete();
+
+        return redirect()
+            ->route('invoices.index')
+            ->with('status', 'Fatura silindi.');
+    }
+
+    public function syncMonthly(Request $request, InvoiceGenerationService $generator): RedirectResponse
+    {
+        $month = $request->input('month');
+
+        try {
+            $target = $month
+                ? Carbon::createFromFormat('Y-m', $month)->startOfMonth()
+                : Carbon::now()->startOfMonth();
+        } catch (\Throwable $exception) {
+            return back()->withErrors(['month' => 'GeÃƒÆ’Ã‚Â§ersiz ay formatÃƒâ€Ã‚Â±.']);
+        }
+
+        $firms = Firm::active()->get();
+        $created = 0;
+
+        foreach ($firms as $firm) {
+            $invoice = $generator->ensureMonthlyInvoice($firm, $target);
+            if ($invoice) {
+                $created++;
+            }
+        }
+
+        $labelDate = $generator->invoiceDateForMonth($target)->format('m/Y');
+        $message = $created > 0
+            ? "{$labelDate} dÃƒÆ’Ã‚Â¶neminde {$created} fatura oluÃƒâ€¦Ã…Â¸turuldu."
+            : "{$labelDate} dÃƒÆ’Ã‚Â¶nemi iÃƒÆ’Ã‚Â§in yeni fatura oluÃƒâ€¦Ã…Â¸turulmadÃƒâ€Ã‚Â±.";
+
+        return back()->with('status', $message);
+    }
+
+    protected function validatedData(Request $request, ?Invoice $invoice = null, $extraFields = []): array
+    {
+        $data = $request->validate([
+            'firm_id'         => ['required', 'exists:firms,id'],
+            'date'            => ['required', 'date'],
+            'due_date'        => ['nullable', 'date', 'after_or_equal:date'],
+            'amount'          => ['required', 'numeric', 'min:0'],
+            'description'     => ['nullable', 'string', 'max:255'],
+            'official_number' => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::unique('invoices', 'official_number')->ignore($invoice?->id),
+            ],
+        ]);
+
+        $data['status'] = $data['status'] ?? 'unpaid';
+        $data['description'] = $data['description']
+            ?? Setting::getValue('invoice_default_description', '');
+
+        if (empty($data['due_date'])) {
+            $dueDays = (int) Setting::getValue('invoice_default_due_days', 0);
+            if ($dueDays > 0) {
+                $data['due_date'] = Carbon::parse($data['date'])
+                    ->addDays($dueDays)
+                    ->format('Y-m-d');
+            }
+        }
+
+        if (! empty($extraFields)) {
+            $rules = [];
+
+            foreach ($extraFields as $field) {
+                $ruleParts = $field->is_required ? ['required'] : ['nullable'];
+
+                switch ($field->type) {
+                    case 'number':
+                        $ruleParts[] = 'numeric';
+                        break;
+                    case 'date':
+                        $ruleParts[] = 'date';
+                        break;
+                    default:
+                        $ruleParts[] = 'string';
+                        break;
+                }
+
+                $rules['extra_fields.' . $field->id] = implode('|', $ruleParts);
+            }
+
+            if (! empty($rules)) {
+                $validatedExtras = $request->validate($rules);
+                $data['extra_fields'] = $validatedExtras['extra_fields'] ?? [];
+            }
+        }
+
+        return $data;
+    }
+
+    protected function syncExtraValues(Invoice $invoice, $extraFields, array $values): void
+    {
+        foreach ($extraFields as $field) {
+            $value = $values[$field->id] ?? null;
+
+            if ($value === null || $value === '') {
+                $invoice->extraValues()
+                    ->where('extra_field_id', $field->id)
+                    ->delete();
+                continue;
+            }
+
+            $invoice->extraValues()->updateOrCreate(
+                ['extra_field_id' => $field->id],
+                ['value' => $value]
+            );
+        }
+    }
+}

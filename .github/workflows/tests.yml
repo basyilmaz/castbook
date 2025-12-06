@@ -1,0 +1,56 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_DATABASE: muhasebe
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist
+
+      - name: Copy environment
+        run: cp .env.example .env
+
+      - name: Configure database
+        run: |
+          php -r "file_put_contents('.env', preg_replace('/^DB_CONNECTION=.*/m', 'DB_CONNECTION=mysql', file_get_contents('.env')));"
+          php -r "file_put_contents('.env', preg_replace('/^DB_HOST=.*/m', 'DB_HOST=127.0.0.1', file_get_contents('.env')));"
+          php -r "file_put_contents('.env', preg_replace('/^DB_PORT=.*/m', 'DB_PORT=3306', file_get_contents('.env')));"
+          php -r "file_put_contents('.env', preg_replace('/^DB_DATABASE=.*/m', 'DB_DATABASE=muhasebe', file_get_contents('.env')));"
+          php -r "file_put_contents('.env', preg_replace('/^DB_USERNAME=.*/m', 'DB_USERNAME=root', file_get_contents('.env')));"
+          php -r "file_put_contents('.env', preg_replace('/^DB_PASSWORD=.*/m', 'DB_PASSWORD=root', file_get_contents('.env')));"
+          php artisan key:generate
+
+      - name: Run migrations
+        run: php artisan migrate --seed
+
+      - name: Run tests
+        run: php artisan test

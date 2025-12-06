@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Allow: /demo
+Allow: /login
+Allow: /sitemap.xml
+
+Disallow: /dashboard
+Disallow: /firms
+Disallow: /invoices
+Disallow: /payments
+Disallow: /settings
+Disallow: /users
+Disallow: /reports
+Disallow: /tax-declarations
+
+Sitemap: https://castbook.dev/sitemap.xml
