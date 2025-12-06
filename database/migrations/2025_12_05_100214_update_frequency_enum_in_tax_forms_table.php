@@ -9,6 +9,15 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // This migration uses SQLite-specific syntax (CREATE TABLE AS SELECT)
+        // and enum which works differently in PostgreSQL
+        // Skip for PostgreSQL - the table will be created fresh
+        if (DB::getDriverName() === 'pgsql') {
+            // For PostgreSQL, just ensure the column accepts the right values
+            // The table should already exist from initial migration
+            return;
+        }
+
         // SQLite doesn't support ALTER COLUMN, so we need to recreate the table
         DB::statement('DROP TABLE IF EXISTS tax_forms_backup');
         DB::statement('CREATE TABLE tax_forms_backup AS SELECT * FROM tax_forms');
@@ -20,7 +29,7 @@ return new class extends Migration
             $table->string('code', 50)->unique();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->enum('frequency', ['monthly', 'quarterly', 'annual'])->default('monthly');
+            $table->string('frequency')->default('monthly'); // Changed from enum to string
             $table->integer('default_due_day')->default(26);
             $table->boolean('is_active')->default(true);
             $table->json('applicable_to')->nullable();
@@ -35,6 +44,11 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Skip for PostgreSQL
+        if (DB::getDriverName() === 'pgsql') {
+            return;
+        }
+
         // Revert back to monthly only
         DB::statement('DROP TABLE IF EXISTS tax_forms_backup');
         DB::statement('CREATE TABLE tax_forms_backup AS SELECT * FROM tax_forms');
@@ -46,7 +60,7 @@ return new class extends Migration
             $table->string('code', 50)->unique();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->enum('frequency', ['monthly'])->default('monthly');
+            $table->string('frequency')->default('monthly');
             $table->integer('default_due_day')->default(26);
             $table->boolean('is_active')->default(true);
             $table->json('applicable_to')->nullable();

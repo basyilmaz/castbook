@@ -10,7 +10,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (DB::getDriverName() === 'sqlite') {
+        // SQLite and PostgreSQL don't support MySQL ENUM syntax
+        // Skip this migration for non-MySQL databases
+        if (DB::getDriverName() !== 'mysql') {
             return;
         }
 
@@ -22,7 +24,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (DB::getDriverName() === 'sqlite') {
+        // SQLite and PostgreSQL don't support MySQL ENUM syntax
+        if (DB::getDriverName() !== 'mysql') {
             return;
         }
 
