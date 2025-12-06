@@ -5,7 +5,10 @@ nixPkgs = ["php83", "php83Extensions.pdo_sqlite", "php83Extensions.sqlite3", "ph
 cmds = [
     "composer install --no-dev --optimize-autoloader",
     "npm install",
-    "npm run build"
+    "npm run build",
+    "mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache/data storage/logs",
+    "touch database/database.sqlite",
+    "chmod -R 775 storage bootstrap/cache database"
 ]
 
 [phases.install]
