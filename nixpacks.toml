@@ -1,0 +1,19 @@
+[phases.setup]
+nixPkgs = ["php82", "nginx", "php82Packages.composer", "nodejs_18", "npm"]
+
+[phases.install]
+cmds = [
+    "mkdir -p /var/log/nginx && mkdir -p /var/cache/nginx",
+    "composer install --no-dev --optimize-autoloader",
+    "npm ci && npm run build"
+]
+
+[phases.build]
+cmds = [
+    "php artisan config:clear",
+    "php artisan route:clear",
+    "php artisan view:clear"
+]
+
+[start]
+cmd = "php artisan migrate --force && (php-fpm -D && nginx -g 'daemon off;')"
