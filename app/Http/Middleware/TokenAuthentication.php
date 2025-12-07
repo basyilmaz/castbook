@@ -7,13 +7,13 @@ use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class TokenAuthentication
 {
     /**
      * Token-based authentication middleware
+     * Railway'de session cookie çalışmadığı için URL token kullanıyoruz
      * Token URL query, POST body veya session'dan alınır
      */
     public function handle(Request $request, Closure $next): Response
@@ -28,13 +28,6 @@ class TokenAuthentication
         $token = $request->query('_auth')   // URL'den (GET)
               ?? $request->input('_auth')    // Form body'den (POST)
               ?? session('auth_token');      // Session'dan
-        
-        // Debug log
-        Log::debug('TokenAuth', [
-            'has_token' => !empty($token),
-            'source' => $request->query('_auth') ? 'query' : ($request->input('_auth') ? 'input' : (session('auth_token') ? 'session' : 'none')),
-            'path' => $request->path(),
-        ]);
 
         if ($token) {
             // Token validation
@@ -46,12 +39,9 @@ class TokenAuthentication
 
                 // Token'ı session'a kaydet
                 session(['auth_token' => $token]);
-                
-                Log::debug('TokenAuth: Authenticated', ['user_id' => $authToken->user->id]);
             } else {
                 // Geçersiz token
                 session()->forget('auth_token');
-                Log::warning('TokenAuth: Invalid token');
             }
         }
 
@@ -89,8 +79,6 @@ class TokenAuthentication
         $separator = str_contains($targetUrl, '?') ? '&' : '?';
         $newUrl = $targetUrl . $separator . '_auth=' . $token;
         $response->setTargetUrl($newUrl);
-        
-        Log::debug('TokenAuth: Redirect with token', ['url' => $newUrl]);
         
         return $response;
     }
