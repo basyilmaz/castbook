@@ -165,14 +165,27 @@
                                     @endphp
                                     <td class="text-center">
                                         @if($decl)
-                                            @php $s = $statusLabels[$decl->status] ?? $statusLabels['pending']; @endphp
-                                            <a href="{{ route('tax-declarations.edit', $decl) }}" 
-                                               class="badge bg-{{ $s['class'] }} text-decoration-none"
-                                               title="{{ $decl->due_date?->format('d.m.Y') ?? 'Tarih Yok' }}">
-                                                {{ $s['label'] }}
-                                            </a>
-                                            @if($decl->isOverdue())
-                                                <i class="bi bi-exclamation-circle-fill text-danger ms-1" title="Gecikmiş!"></i>
+                                            @php 
+                                                $s = $statusLabels[$decl->status] ?? $statusLabels['pending'];
+                                                $isCompleted = in_array($decl->status, ['paid', 'filed', 'not_required']);
+                                            @endphp
+                                            @if($isCompleted)
+                                                {{-- Verilmiş beyanname - Yeşil tik --}}
+                                                <a href="{{ route('tax-declarations.edit', $decl) }}" 
+                                                   class="text-success text-decoration-none"
+                                                   title="{{ $s['label'] }} - {{ $decl->due_date?->format('d.m.Y') ?? '' }}">
+                                                    <i class="bi bi-check-circle-fill fs-5"></i>
+                                                </a>
+                                            @else
+                                                {{-- Bekleyen beyanname - Badge --}}
+                                                <a href="{{ route('tax-declarations.edit', $decl) }}" 
+                                                   class="badge bg-{{ $s['class'] }} text-decoration-none"
+                                                   title="{{ $decl->due_date?->format('d.m.Y') ?? 'Tarih Yok' }}">
+                                                    {{ $s['label'] }}
+                                                </a>
+                                                @if($decl->isOverdue())
+                                                    <i class="bi bi-exclamation-circle-fill text-danger ms-1" title="Gecikmiş!"></i>
+                                                @endif
                                             @endif
                                         @else
                                             <span class="text-muted">-</span>

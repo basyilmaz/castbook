@@ -137,7 +137,7 @@
                     <button class="btn btn-primary" type="submit">
                         <i class="bi bi-funnel-fill me-1"></i> Filtrele
                     </button>
-                    <a href="{{ route('tax-declarations.index') }}" class="btn btn-outline-secondary">Temizle</a>
+                    <a href="{{ route('tax-declarations.index', ['status' => '']) }}" class="btn btn-outline-secondary">Tümünü Göster</a>
                 </div>
             </form>
         </div>

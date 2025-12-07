@@ -18,6 +18,11 @@ class TaxDeclarationController extends Controller
         $filters = $request->only(['firm_id', 'tax_form_id', 'status', 'year', 'month']);
         $perPage = 20;
 
+        // Varsayılan olarak sadece bekleyen beyannameleri göster
+        if (!$request->has('status') && !$request->has('firm_id')) {
+            $filters['status'] = 'pending';
+        }
+
         $query = TaxDeclaration::query()
             ->with(['firm:id,name', 'taxForm:id,code,name'])
             ->when($filters['firm_id'] ?? null, fn ($q, $firmId) => $q->where('firm_id', $firmId))
