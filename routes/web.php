@@ -49,6 +49,54 @@ Route::get('/health', function () {
     ]);
 });
 
+// Kapsamlı Debug Endpoint
+Route::get('/auth-debug', function (\Illuminate\Http\Request $request) {
+    $token = $request->query('_auth') 
+          ?? $request->input('_auth') 
+          ?? session('auth_token');
+    
+    $authToken = $token ? \App\Models\AuthToken::where('token', $token)->first() : null;
+    
+    return response()->json([
+        'timestamp' => now()->toIso8601String(),
+        'auth' => [
+            'is_authenticated' => \Illuminate\Support\Facades\Auth::check(),
+            'user_id' => \Illuminate\Support\Facades\Auth::id(),
+            'user_email' => \Illuminate\Support\Facades\Auth::user()?->email,
+        ],
+        'token' => [
+            'from_query' => $request->query('_auth') ? 'yes' : 'no',
+            'from_input' => $request->input('_auth') ? 'yes' : 'no', 
+            'from_session' => session('auth_token') ? 'yes' : 'no',
+            'token_value' => $token ? substr($token, 0, 8) . '...' : null,
+            'db_exists' => $authToken ? 'yes' : 'no',
+            'db_valid' => $authToken && $authToken->expires_at > now() ? 'yes' : 'no',
+            'db_user_id' => $authToken?->user_id,
+            'db_expires_at' => $authToken?->expires_at?->toIso8601String(),
+        ],
+        'session' => [
+            'id' => session()->getId(),
+            'driver' => config('session.driver'),
+            'has_auth_token' => session()->has('auth_token'),
+        ],
+        'request' => [
+            'method' => $request->method(),
+            'path' => $request->path(),
+            'ip' => $request->ip(),
+        ],
+    ]);
+});
+
+// POST test için
+Route::post('/auth-debug-post', function (\Illuminate\Http\Request $request) {
+    return response()->json([
+        'method' => 'POST',
+        'auth_from_input' => $request->input('_auth') ? 'yes (' . substr($request->input('_auth'), 0, 8) . '...)' : 'no',
+        'all_input_keys' => array_keys($request->all()),
+        'is_authenticated' => \Illuminate\Support\Facades\Auth::check(),
+    ]);
+});
+
 // Debug routes with explicit web middleware
 Route::middleware('web')->group(function () {
     // Cookie test - with explicit header
