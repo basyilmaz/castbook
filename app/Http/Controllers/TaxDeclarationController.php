@@ -70,6 +70,7 @@ class TaxDeclarationController extends Controller
 
         $declarations = TaxDeclaration::query()
             ->with(['firm:id,name', 'taxForm:id,code,name'])
+            ->whereNotNull('due_date')
             ->whereBetween('due_date', [$startDate, $endDate])
             ->get()
             ->groupBy(fn ($d) => $d->due_date->format('Y-m-d'));
@@ -79,13 +80,13 @@ class TaxDeclarationController extends Controller
 
         foreach ($declarations as $date => $items) {
             $calendarData[$date] = $items->map(function ($d) use ($today) {
-                $isOverdue = $d->due_date->lt($today) && in_array($d->status, ['pending', 'filed']);
+                $isOverdue = $d->due_date && $d->due_date->lt($today) && in_array($d->status, ['pending', 'filed']);
                 
                 return [
                     'id' => $d->id,
-                    'firm_name' => $d->firm->name ?? '-',
-                    'tax_form_code' => $d->taxForm->code ?? '-',
-                    'tax_form_name' => $d->taxForm->name ?? '-',
+                    'firm_name' => $d->firm?->name ?? '-',
+                    'tax_form_code' => $d->taxForm?->code ?? '-',
+                    'tax_form_name' => $d->taxForm?->name ?? '-',
                     'period_label' => $d->period_label,
                     'status' => $d->status,
                     'is_overdue' => $isOverdue,
