@@ -140,20 +140,18 @@ Route::middleware(['auth', 'active'])->group(function () {
             ->except(['show']);
     });
 
-    Route::resource('tax-declarations', TaxDeclarationController::class)
-        ->only(['index', 'edit', 'update']);
-
-    // Beyanname API endpoints
+    // Beyanname API endpoints - Resource'dan ÖNCE tanımlanmalı
     Route::get('tax-declarations/api/calendar', [TaxDeclarationController::class, 'calendar'])
         ->name('tax-declarations.calendar');
     Route::get('tax-declarations/api/today-due', [TaxDeclarationController::class, 'todayDue'])
         ->name('tax-declarations.today-due');
     Route::patch('tax-declarations/bulk-status', [TaxDeclarationController::class, 'bulkUpdateStatus'])
         ->name('tax-declarations.bulk-status');
-
-    // AJAX endpoint - Hızlı durum değiştirme
     Route::patch('tax-declarations/{taxDeclaration}/status', [TaxDeclarationController::class, 'updateStatus'])
         ->name('tax-declarations.update-status');
+
+    Route::resource('tax-declarations', TaxDeclarationController::class)
+        ->only(['index', 'edit', 'update']);
 
     Route::prefix('reports')->name('reports.')->group(function () {
         Route::get('balances', [ReportController::class, 'balances'])->name('balance');
