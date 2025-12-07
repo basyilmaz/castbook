@@ -70,12 +70,26 @@ Route::get('/test-login', function () {
     $user = \App\Models\User::where('email', 'muhasebe@example.com')->first();
     if ($user) {
         \Illuminate\Support\Facades\Auth::login($user, true);
-        return response()->json([
+        
+        $response = response()->json([
             'login_attempted' => true,
             'auth_check_after_login' => \Illuminate\Support\Facades\Auth::check(),
             'user_after_login' => \Illuminate\Support\Facades\Auth::user()?->email,
             'session_id' => session()->getId(),
+            'session_cookie_name' => config('session.cookie'),
+            'session_config' => [
+                'driver' => config('session.driver'),
+                'secure' => config('session.secure'),
+                'same_site' => config('session.same_site'),
+                'domain' => config('session.domain'),
+                'path' => config('session.path'),
+            ],
         ]);
+        
+        // Manuel test cookie
+        $response->cookie('test_cookie', 'works', 60);
+        
+        return $response;
     }
     return 'User not found';
 });
