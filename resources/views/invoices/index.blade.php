@@ -257,9 +257,13 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <a href="{{ route('firms.show', $invoice->firm) }}" class="text-decoration-none">
-                                        {{ $invoice->firm->name }}
-                                    </a>
+                                    @if($invoice->firm)
+                                        <a href="{{ route('firms.show', $invoice->firm) }}" class="text-decoration-none">
+                                            {{ $invoice->firm->name }}
+                                        </a>
+                                    @else
+                                        <span class="text-muted">Silinmiş Firma</span>
+                                    @endif
                                 </td>
                                 <td>{{ $invoice->date?->format('d.m.Y') }}</td>
                                 <td class="text-end">{{ Format::money($invoice->amount) }}</td>

@@ -168,7 +168,7 @@
                                             @php $s = $statusLabels[$decl->status] ?? $statusLabels['pending']; @endphp
                                             <a href="{{ route('tax-declarations.edit', $decl) }}" 
                                                class="badge bg-{{ $s['class'] }} text-decoration-none"
-                                               title="{{ $decl->due_date->format('d.m.Y') }}">
+                                               title="{{ $decl->due_date?->format('d.m.Y') ?? 'Tarih Yok' }}">
                                                 {{ $s['label'] }}
                                             </a>
                                             @if($decl->isOverdue())
