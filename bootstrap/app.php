@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // Trust all proxies (for Railway, Heroku, etc.)
         $middleware->trustProxies(at: '*', headers: \Illuminate\Http\Request::HEADER_X_FORWARDED_FOR | \Illuminate\Http\Request::HEADER_X_FORWARDED_HOST | \Illuminate\Http\Request::HEADER_X_FORWARDED_PORT | \Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO);
         
+        // Exclude login routes from CSRF verification (Railway session issues)
+        $middleware->validateCsrfTokens(except: [
+            'login',
+            'logout',
+        ]);
+        
         // Global middleware (tüm isteklere uygulanır)
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         
