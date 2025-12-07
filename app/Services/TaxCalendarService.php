@@ -35,14 +35,8 @@ class TaxCalendarService
             'frequency' => 'monthly',
             'offset_month' => -1,
         ],
-        'BA' => [
-            'name' => 'Mal ve Hizmet Alımlarına İlişkin Bildirim Formu (Form Ba)',
-            'day' => 15,
-            'frequency' => 'monthly',
-            'offset_month' => -1,
-        ],
-        'BS' => [
-            'name' => 'Mal ve Hizmet Satışlarına İlişkin Bildirim Formu (Form Bs)',
+        'BA_BS' => [
+            'name' => 'Mal ve Hizmet Alım/Satışlarına İlişkin Bildirim Formu (Form Ba-Bs)',
             'day' => 15,
             'frequency' => 'monthly',
             'offset_month' => -1,
@@ -107,9 +101,9 @@ class TaxCalendarService
                     'month' => $month,
                     'day' => $dueDate->day,
                     'due_date' => $dueDate->toDateString(),
-                    'code' => $code === 'BA' || $code === 'BS' ? 'BA_BS' : $code,
+                    'code' => $code,
                     'name' => $config['name'],
-                    'period_label' => $periodMonth->translatedFormat('F Y'),
+                    'period_label' => $periodMonth->format('Y-m'),
                     'frequency' => 'monthly',
                 ]);
 
@@ -133,6 +127,9 @@ class TaxCalendarService
             $dueDate = $this->calculateDueDate($year, $month, 17);
 
             foreach ($this->quarterlyDeclarations as $code => $config) {
+                // Gelir ve Kurumlar için farklı label
+                $typeLabel = str_contains($code, 'GELIR') ? 'G' : 'K';
+                
                 $result = $this->createEntry([
                     'year' => $year,
                     'month' => $month,
@@ -140,7 +137,7 @@ class TaxCalendarService
                     'due_date' => $dueDate->toDateString(),
                     'code' => 'GECICI_VERGI',
                     'name' => $config['name'] . ' (' . $info['quarter'] . '. Dönem)',
-                    'period_label' => $info['label'],
+                    'period_label' => $info['label'] . '-' . $typeLabel,
                     'frequency' => 'quarterly',
                 ]);
 
@@ -209,10 +206,10 @@ class TaxCalendarService
      */
     protected function createEntry(array $data): array
     {
-        // Aynı tarih, kod ve isimde kayıt var mı?
-        $exists = TaxCalendar::where('due_date', $data['due_date'])
+        // Aynı tarih, kod ve dönem etiketi ile kayıt var mı?
+        $exists = TaxCalendar::whereDate('due_date', $data['due_date'])
             ->where('code', $data['code'])
-            ->where('name', $data['name'])
+            ->where('period_label', $data['period_label'])
             ->exists();
 
         if ($exists) {
