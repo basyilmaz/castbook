@@ -13,7 +13,14 @@ return new class extends Migration
     {
         Schema::create('auth_tokens', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('token', 64)->unique();
+            $table->timestamp('expires_at');
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
             $table->timestamps();
+            
+            $table->index(['token', 'expires_at']);
         });
     }
 
