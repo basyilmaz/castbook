@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         
         // Global middleware (tüm isteklere uygulanır)
+        $middleware->append(\App\Http\Middleware\TokenAuthentication::class);
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         
         $middleware->alias([
