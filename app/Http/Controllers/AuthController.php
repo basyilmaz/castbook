@@ -31,7 +31,8 @@ class AuthController extends Controller
             ]);
         }
 
-        $request->session()->regenerate();
+        // Session regenerate disabled for Railway cookie driver compatibility
+        // $request->session()->regenerate();
 
         if (! Auth::user()->is_active) {
             Auth::logout();
