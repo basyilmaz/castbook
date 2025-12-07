@@ -20,6 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'logout',
         ]);
         
+        // Disable cookie encryption for test
+        $middleware->encryptCookies(except: [
+            'laravel_test',
+        ]);
+        
         // Global middleware (tüm isteklere uygulanır)
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         
