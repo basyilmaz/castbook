@@ -11,8 +11,8 @@ use Symfony\Component\HttpFoundation\Response;
 class TokenAuthentication
 {
     /**
-     * URL'deki _token parametresi ile authentication yap
-     * Token bir kez URL'de gelir, session'a kaydedilir, sonra URL temizlenir
+     * Token-based authentication middleware
+     * Token URL query, POST body veya session'dan alınır
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -24,9 +24,11 @@ class TokenAuthentication
             return $this->addSecurityHeaders($next($request));
         }
 
-        // URL'den token al (sadece ilk giriş için) - _auth kullan (_token CSRF ile çakışır)
-        $token = $request->query('_auth');
-
+        // Token'ı al: URL query, POST body veya session'dan
+        $token = $request->query('_auth')  // URL'den (GET)
+              ?? $request->input('_auth')   // Form body'den (POST)
+              ?? session('auth_token');     // Session'dan
+        
         if ($token) {
             // IP kontrolü ile token validation
             $authToken = AuthToken::findValidToken($token, $currentIp);
@@ -35,21 +37,10 @@ class TokenAuthentication
                 // Kullanıcıyı authenticate et
                 Auth::login($authToken->user);
 
-                // Token'ı session'a kaydet (sayfa içi navigasyon için)
+                // Token'ı session'a kaydet
                 session(['auth_token' => $token]);
             } else {
                 // Geçersiz token - session'dan temizle
-                session()->forget('auth_token');
-            }
-        }
-
-        // Session'dan token kontrol et (normal navigasyon için)
-        if (!Auth::check() && session('auth_token')) {
-            $authToken = AuthToken::findValidToken(session('auth_token'), $currentIp);
-            if ($authToken) {
-                Auth::login($authToken->user);
-            } else {
-                // Geçersiz session token - temizle
                 session()->forget('auth_token');
             }
         }
