@@ -49,6 +49,12 @@ Route::get('/health', function () {
     ]);
 });
 
+// Native PHP cookie test - Laravel bypass
+Route::get('/cookie-test', function () {
+    setcookie('native_test', 'works', time() + 3600, '/');
+    return response('Cookie set! Check your cookies.')->cookie('laravel_test', 'also_works', 60);
+});
+
 // Debug routes with explicit web middleware
 Route::middleware('web')->group(function () {
     // Debug route - session ve auth durumunu göster
