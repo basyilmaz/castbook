@@ -49,6 +49,16 @@ Route::get('/health', function () {
     ]);
 });
 
+// Debug route - session ve auth durumunu göster
+Route::get('/debug-session', function () {
+    return response()->json([
+        'authenticated' => \Illuminate\Support\Facades\Auth::check(),
+        'user' => \Illuminate\Support\Facades\Auth::user()?->email,
+        'session_id' => session()->getId(),
+        'session_driver' => config('session.driver'),
+    ]);
+});
+
 // Sitemap for SEO
 Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
 
