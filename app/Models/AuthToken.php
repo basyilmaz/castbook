@@ -8,6 +8,12 @@ use Illuminate\Support\Str;
 
 class AuthToken extends Model
 {
+    // Token ömrü (dakika cinsinden)
+    public const TOKEN_LIFETIME_MINUTES = 120; // 2 saat
+    
+    // Aktivite sonrası uzatma süresi (dakika)
+    public const TOKEN_EXTEND_MINUTES = 30;
+
     protected $fillable = [
         'user_id',
         'token',
@@ -37,32 +43,80 @@ class AuthToken extends Model
     }
 
     /**
+     * IP adresinin eşleşip eşleşmediğini kontrol et
+     */
+    public function matchesIp(?string $currentIp): bool
+    {
+        // IP kaydedilmemişse geç
+        if (empty($this->ip_address)) {
+            return true;
+        }
+        
+        return $this->ip_address === $currentIp;
+    }
+
+    /**
+     * Token'ın son kullanma süresini uzat (aktivite varsa)
+     */
+    public function extendExpiration(): void
+    {
+        // Sadece son 30 dakikada kaldıysa uzat
+        if ($this->expires_at->diffInMinutes(now()) < self::TOKEN_EXTEND_MINUTES) {
+            $this->expires_at = now()->addMinutes(self::TOKEN_EXTEND_MINUTES);
+            $this->save();
+        }
+    }
+
+    /**
      * Yeni bir auth token oluştur
      */
     public static function createForUser(User $user, ?string $ipAddress = null, ?string $userAgent = null): self
     {
-        // Eski token'ları temizle (aynı kullanıcı için)
-        static::where('user_id', $user->id)
-            ->where('expires_at', '<', now())
-            ->delete();
+        // Aynı kullanıcının eski token'larını temizle
+        static::where('user_id', $user->id)->delete();
 
         return static::create([
             'user_id' => $user->id,
-            'token' => Str::random(64),
-            'expires_at' => now()->addDays(7), // 7 gün geçerli
+            'token' => self::generateSecureToken(),
+            'expires_at' => now()->addMinutes(self::TOKEN_LIFETIME_MINUTES),
             'ip_address' => $ipAddress,
-            'user_agent' => $userAgent,
+            'user_agent' => $userAgent ? substr($userAgent, 0, 500) : null, // User agent max 500 karakter
         ]);
     }
 
     /**
-     * Token ile kullanıcıyı bul
+     * Güvenli token oluştur
      */
-    public static function findValidToken(string $token): ?self
+    protected static function generateSecureToken(): string
     {
-        return static::where('token', $token)
+        // Cryptographically secure random token
+        return bin2hex(random_bytes(32)); // 64 karakter hex
+    }
+
+    /**
+     * Token ile kullanıcıyı bul (IP kontrolü ile)
+     */
+    public static function findValidToken(string $token, ?string $currentIp = null): ?self
+    {
+        $authToken = static::where('token', $token)
             ->where('expires_at', '>', now())
             ->first();
+
+        if (!$authToken) {
+            return null;
+        }
+
+        // IP kontrolü (opsiyonel ama önerilen)
+        if ($currentIp && !$authToken->matchesIp($currentIp)) {
+            // Farklı IP'den erişim - güvenlik için token'ı iptal et
+            $authToken->delete();
+            return null;
+        }
+
+        // Token'ı kullanıldığında süresini uzat
+        $authToken->extendExpiration();
+
+        return $authToken;
     }
 
     /**
@@ -71,5 +125,13 @@ class AuthToken extends Model
     public static function revokeAllForUser(int $userId): void
     {
         static::where('user_id', $userId)->delete();
+    }
+
+    /**
+     * Süresi dolmuş token'ları temizle (cron job için)
+     */
+    public static function cleanupExpired(): int
+    {
+        return static::where('expires_at', '<', now())->delete();
     }
 }

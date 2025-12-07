@@ -17,14 +17,18 @@ class TokenAuthentication
     {
         // Zaten authenticated ise devam et
         if (Auth::check()) {
-            return $this->appendTokenToResponse($request, $next($request));
+            return $this->addSecurityHeaders($this->appendTokenToResponse($request, $next($request)));
         }
+
+        // Mevcut IP adresi
+        $currentIp = $request->ip();
 
         // URL'den token al
         $token = $request->query('_token') ?? $request->cookie('auth_token');
 
         if ($token) {
-            $authToken = AuthToken::findValidToken($token);
+            // IP kontrolü ile token validation
+            $authToken = AuthToken::findValidToken($token, $currentIp);
 
             if ($authToken) {
                 // Kullanıcıyı authenticate et
@@ -32,18 +36,41 @@ class TokenAuthentication
 
                 // Token'ı session'a kaydet (sayfa içi navigasyon için)
                 session(['auth_token' => $token]);
+            } else {
+                // Geçersiz token - session'dan temizle
+                session()->forget('auth_token');
             }
         }
 
         // Session'dan token kontrol et
         if (!Auth::check() && session('auth_token')) {
-            $authToken = AuthToken::findValidToken(session('auth_token'));
+            $authToken = AuthToken::findValidToken(session('auth_token'), $currentIp);
             if ($authToken) {
                 Auth::login($authToken->user);
+            } else {
+                // Geçersiz session token - temizle
+                session()->forget('auth_token');
             }
         }
 
-        return $this->appendTokenToResponse($request, $next($request));
+        return $this->addSecurityHeaders($this->appendTokenToResponse($request, $next($request)));
+    }
+
+    /**
+     * Güvenlik header'ları ekle
+     */
+    protected function addSecurityHeaders(Response $response): Response
+    {
+        // Token'ın dış sitelere sızmasını engelle
+        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        
+        // URL'in cache'lenmesini engelle (token içerdiği için)
+        if (session('auth_token')) {
+            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            $response->headers->set('Pragma', 'no-cache');
+        }
+
+        return $response;
     }
 
     /**
