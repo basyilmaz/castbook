@@ -49,49 +49,52 @@ Route::get('/health', function () {
     ]);
 });
 
-// Debug route - session ve auth durumunu göster
-Route::get('/debug-session', function () {
-    $user = \App\Models\User::where('email', 'muhasebe@example.com')->first();
-    $passwordValid = $user ? \Illuminate\Support\Facades\Hash::check('Parola123!', $user->password) : null;
-    
-    return response()->json([
-        'authenticated' => \Illuminate\Support\Facades\Auth::check(),
-        'user' => \Illuminate\Support\Facades\Auth::user()?->email,
-        'session_id' => session()->getId(),
-        'session_driver' => config('session.driver'),
-        'test_user_exists' => $user ? true : false,
-        'test_password_valid' => $passwordValid,
-        'test_user_active' => $user?->is_active,
-    ]);
-});
-
-// Test login - doğrudan login yap ve sonucu göster
-Route::get('/test-login', function () {
-    $user = \App\Models\User::where('email', 'muhasebe@example.com')->first();
-    if ($user) {
-        \Illuminate\Support\Facades\Auth::login($user, true);
+// Debug routes with explicit web middleware
+Route::middleware('web')->group(function () {
+    // Debug route - session ve auth durumunu göster
+    Route::get('/debug-session', function () {
+        $user = \App\Models\User::where('email', 'muhasebe@example.com')->first();
+        $passwordValid = $user ? \Illuminate\Support\Facades\Hash::check('Parola123!', $user->password) : null;
         
-        $response = response()->json([
-            'login_attempted' => true,
-            'auth_check_after_login' => \Illuminate\Support\Facades\Auth::check(),
-            'user_after_login' => \Illuminate\Support\Facades\Auth::user()?->email,
+        return response()->json([
+            'authenticated' => \Illuminate\Support\Facades\Auth::check(),
+            'user' => \Illuminate\Support\Facades\Auth::user()?->email,
             'session_id' => session()->getId(),
-            'session_cookie_name' => config('session.cookie'),
-            'session_config' => [
-                'driver' => config('session.driver'),
-                'secure' => config('session.secure'),
-                'same_site' => config('session.same_site'),
-                'domain' => config('session.domain'),
-                'path' => config('session.path'),
-            ],
+            'session_driver' => config('session.driver'),
+            'test_user_exists' => $user ? true : false,
+            'test_password_valid' => $passwordValid,
+            'test_user_active' => $user?->is_active,
         ]);
-        
-        // Manuel test cookie
-        $response->cookie('test_cookie', 'works', 60);
-        
-        return $response;
-    }
-    return 'User not found';
+    });
+
+    // Test login - doğrudan login yap ve sonucu göster
+    Route::get('/test-login', function () {
+        $user = \App\Models\User::where('email', 'muhasebe@example.com')->first();
+        if ($user) {
+            \Illuminate\Support\Facades\Auth::login($user, true);
+            
+            $response = response()->json([
+                'login_attempted' => true,
+                'auth_check_after_login' => \Illuminate\Support\Facades\Auth::check(),
+                'user_after_login' => \Illuminate\Support\Facades\Auth::user()?->email,
+                'session_id' => session()->getId(),
+                'session_cookie_name' => config('session.cookie'),
+                'session_config' => [
+                    'driver' => config('session.driver'),
+                    'secure' => config('session.secure'),
+                    'same_site' => config('session.same_site'),
+                    'domain' => config('session.domain'),
+                    'path' => config('session.path'),
+                ],
+            ]);
+            
+            // Manuel test cookie
+            $response->cookie('test_cookie', 'works', 60);
+            
+            return $response;
+        }
+        return 'User not found';
+    });
 });
 
 // Sitemap for SEO
