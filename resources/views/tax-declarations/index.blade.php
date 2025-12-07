@@ -577,12 +577,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('calendarTitle').textContent = `${monthNames[month - 1]} ${year}`;
         document.getElementById('calendarDays').innerHTML = '<div class="text-center py-5"><i class="bi bi-arrow-repeat spin"></i> Yükleniyor...</div>';
         
-        // API'den verileri al
+        // API'den verileri al (axios interceptor otomatik token ekler)
         axios.get('{{ route("tax-declarations.calendar") }}', {
             params: { year: year, month: month }
         }).then(response => {
             buildCalendarGrid(year, month, response.data.data);
         }).catch(error => {
+            console.error('Calendar API Error:', error.response?.data || error.message);
             document.getElementById('calendarDays').innerHTML = '<div class="text-center text-danger py-5">Veriler yüklenemedi</div>';
         });
     }

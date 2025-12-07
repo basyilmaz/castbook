@@ -55,12 +55,34 @@
                 urlParams.delete(URL_PARAM);
                 const cleanUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
                 window.history.replaceState({}, document.title, cleanUrl || '/');
+            } else {
+                // URL'de token yok ama localStorage'da var - hard refresh durumu
+                const storedToken = localStorage.getItem(TOKEN_KEY);
+                if (storedToken && !window.location.pathname.match(/^\/($|login|password)/)) {
+                    // Login ve public sayfalar hariç, token ile sayfayı yeniden yükle
+                    const separator = window.location.search ? '&' : '?';
+                    const newUrl = window.location.pathname + window.location.search + separator + URL_PARAM + '=' + storedToken + window.location.hash;
+                    window.location.replace(newUrl);
+                    return; // Sayfa yeniden yükleniyor, devam etme
+                }
             }
             
             // Sayfa yüklendikten sonra tüm linklere token ekle
             document.addEventListener('DOMContentLoaded', function() {
                 const token = localStorage.getItem(TOKEN_KEY);
                 if (!token) return;
+                
+                // Global axios interceptor - tüm AJAX isteklerine token ekle
+                if (typeof axios !== 'undefined') {
+                    axios.interceptors.request.use(function(config) {
+                        const t = localStorage.getItem(TOKEN_KEY);
+                        if (t) {
+                            config.params = config.params || {};
+                            config.params._auth = t;
+                        }
+                        return config;
+                    });
+                }
                 
                 // Tüm internal linklere token ekle
                 function addTokenToLinks() {
@@ -106,6 +128,11 @@
             // Logout olunca localStorage'ı temizle
             window.clearAuthToken = function() {
                 localStorage.removeItem(TOKEN_KEY);
+            };
+            
+            // Global erişim için
+            window.getAuthToken = function() {
+                return localStorage.getItem(TOKEN_KEY);
             };
         })();
     </script>
