@@ -51,11 +51,17 @@ Route::get('/health', function () {
 
 // Debug route - session ve auth durumunu göster
 Route::get('/debug-session', function () {
+    $user = \App\Models\User::where('email', 'muhasebe@example.com')->first();
+    $passwordValid = $user ? \Illuminate\Support\Facades\Hash::check('Parola123!', $user->password) : null;
+    
     return response()->json([
         'authenticated' => \Illuminate\Support\Facades\Auth::check(),
         'user' => \Illuminate\Support\Facades\Auth::user()?->email,
         'session_id' => session()->getId(),
         'session_driver' => config('session.driver'),
+        'test_user_exists' => $user ? true : false,
+        'test_password_valid' => $passwordValid,
+        'test_user_active' => $user?->is_active,
     ]);
 });
 
