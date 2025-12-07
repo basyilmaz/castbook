@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\AuthToken;
 use Closure;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -19,7 +20,8 @@ class TokenAuthentication
     {
         // Zaten authenticated ise devam et
         if (Auth::check()) {
-            return $this->addSecurityHeaders($next($request));
+            $response = $next($request);
+            return $this->addSecurityHeaders($this->appendTokenToRedirect($response));
         }
 
         // Token'ı al: URL query, POST body veya session'dan
@@ -28,15 +30,14 @@ class TokenAuthentication
               ?? session('auth_token');      // Session'dan
         
         // Debug log
-        Log::info('TokenAuthentication', [
+        Log::debug('TokenAuth', [
             'has_token' => !empty($token),
-            'token_source' => $request->query('_auth') ? 'query' : ($request->input('_auth') ? 'input' : (session('auth_token') ? 'session' : 'none')),
-            'url' => $request->url(),
-            'method' => $request->method(),
+            'source' => $request->query('_auth') ? 'query' : ($request->input('_auth') ? 'input' : (session('auth_token') ? 'session' : 'none')),
+            'path' => $request->path(),
         ]);
 
         if ($token) {
-            // Token validation - IP kontrolü devre dışı (Railway proxy sorunu)
+            // Token validation
             $authToken = AuthToken::findValidToken($token, null);
 
             if ($authToken) {
@@ -46,15 +47,52 @@ class TokenAuthentication
                 // Token'ı session'a kaydet
                 session(['auth_token' => $token]);
                 
-                Log::info('TokenAuthentication: User authenticated', ['user_id' => $authToken->user->id]);
+                Log::debug('TokenAuth: Authenticated', ['user_id' => $authToken->user->id]);
             } else {
                 // Geçersiz token
                 session()->forget('auth_token');
-                Log::warning('TokenAuthentication: Invalid token');
+                Log::warning('TokenAuth: Invalid token');
             }
         }
 
-        return $this->addSecurityHeaders($next($request));
+        $response = $next($request);
+        return $this->addSecurityHeaders($this->appendTokenToRedirect($response));
+    }
+
+    /**
+     * Redirect response'lara token ekle
+     */
+    protected function appendTokenToRedirect(Response $response): Response
+    {
+        if (!($response instanceof RedirectResponse)) {
+            return $response;
+        }
+        
+        $token = session('auth_token');
+        if (!$token) {
+            return $response;
+        }
+        
+        $targetUrl = $response->getTargetUrl();
+        
+        // Logout, login ve dış URL'ler hariç
+        if (str_contains($targetUrl, 'logout') || str_contains($targetUrl, 'login')) {
+            return $response;
+        }
+        
+        // Zaten token varsa ekleme
+        if (str_contains($targetUrl, '_auth=')) {
+            return $response;
+        }
+        
+        // Token ekle
+        $separator = str_contains($targetUrl, '?') ? '&' : '?';
+        $newUrl = $targetUrl . $separator . '_auth=' . $token;
+        $response->setTargetUrl($newUrl);
+        
+        Log::debug('TokenAuth: Redirect with token', ['url' => $newUrl]);
+        
+        return $response;
     }
 
     /**
