@@ -55,8 +55,8 @@ class AuthController extends Controller
             description: 'Kullanıcı giriş yaptı: ' . Auth::user()->email
         );
 
-        // Token ile redirect
-        $redirectUrl = route('dashboard') . '?_token=' . $authToken->token;
+        // Token ile redirect (_auth kullan - _token CSRF ile çakışır)
+        $redirectUrl = route('dashboard') . '?_auth=' . $authToken->token;
         return redirect($redirectUrl);
     }
 

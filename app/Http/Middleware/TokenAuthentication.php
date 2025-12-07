@@ -24,8 +24,8 @@ class TokenAuthentication
             return $this->addSecurityHeaders($next($request));
         }
 
-        // URL'den token al (sadece ilk giriş için)
-        $token = $request->query('_token');
+        // URL'den token al (sadece ilk giriş için) - _auth kullan (_token CSRF ile çakışır)
+        $token = $request->query('_auth');
 
         if ($token) {
             // IP kontrolü ile token validation

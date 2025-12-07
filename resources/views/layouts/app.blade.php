@@ -43,15 +43,16 @@
         // Token yönetimi (LocalStorage tabanlı)
         (function() {
             const TOKEN_KEY = 'auth_token';
+            const URL_PARAM = '_auth'; // _token yerine _auth kullan (CSRF ile çakışmasın)
             
             // URL'den token al ve localStorage'a kaydet
             const urlParams = new URLSearchParams(window.location.search);
-            const urlToken = urlParams.get('_token');
+            const urlToken = urlParams.get(URL_PARAM);
             
             if (urlToken) {
                 localStorage.setItem(TOKEN_KEY, urlToken);
                 // URL'den token'ı temizle
-                urlParams.delete('_token');
+                urlParams.delete(URL_PARAM);
                 const cleanUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
                 window.history.replaceState({}, document.title, cleanUrl || '/');
             }
@@ -72,11 +73,11 @@
                         if (href.startsWith('#') || href.startsWith('javascript:')) return;
                         if (href.includes('logout')) return;
                         if (/\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|pdf)(\?|$)/.test(href)) return;
-                        if (href.includes('_token=')) return;
+                        if (href.includes(URL_PARAM + '=')) return;
                         
                         // Token ekle
                         const separator = href.includes('?') ? '&' : '?';
-                        link.setAttribute('href', href + separator + '_token=' + token);
+                        link.setAttribute('href', href + separator + URL_PARAM + '=' + token);
                     });
                 }
                 
@@ -85,12 +86,12 @@
                     const action = form.getAttribute('action') || '';
                     if (action.includes('logout')) return;
                     
-                    // Zaten token varsa ekleme
-                    if (form.querySelector('input[name="_token"][type="hidden"]:not([name="csrf-token"])')) return;
+                    // Zaten auth token varsa ekleme
+                    if (form.querySelector('input[name="' + URL_PARAM + '"]')) return;
                     
                     const tokenInput = document.createElement('input');
                     tokenInput.type = 'hidden';
-                    tokenInput.name = '_token';
+                    tokenInput.name = URL_PARAM;
                     tokenInput.value = token;
                     form.appendChild(tokenInput);
                 });
