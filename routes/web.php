@@ -65,12 +65,17 @@ Route::get('/debug-session', function () {
     ]);
 });
 
-// Test login - doğrudan login yap ve dashboard'a yönlendir
+// Test login - doğrudan login yap ve sonucu göster
 Route::get('/test-login', function () {
     $user = \App\Models\User::where('email', 'muhasebe@example.com')->first();
     if ($user) {
         \Illuminate\Support\Facades\Auth::login($user, true);
-        return redirect('/debug-session');
+        return response()->json([
+            'login_attempted' => true,
+            'auth_check_after_login' => \Illuminate\Support\Facades\Auth::check(),
+            'user_after_login' => \Illuminate\Support\Facades\Auth::user()?->email,
+            'session_id' => session()->getId(),
+        ]);
     }
     return 'User not found';
 });
