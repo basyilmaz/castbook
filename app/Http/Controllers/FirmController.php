@@ -144,7 +144,7 @@ class FirmController extends Controller
 
         // Yıl seçenekleri
         $years = $firm->taxDeclarations()
-            ->selectRaw('YEAR(period_start) as year')
+            ->selectRaw('EXTRACT(YEAR FROM period_start)::integer as year')
             ->distinct()
             ->pluck('year')
             ->sort()
