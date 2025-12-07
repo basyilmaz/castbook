@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Trust all proxies (for Railway, Heroku, etc.)
-        $middleware->trustProxies(at: '*');
+        $middleware->trustProxies(at: '*', headers: \Illuminate\Http\Request::HEADER_X_FORWARDED_FOR | \Illuminate\Http\Request::HEADER_X_FORWARDED_HOST | \Illuminate\Http\Request::HEADER_X_FORWARDED_PORT | \Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO);
         
         // Global middleware (tüm isteklere uygulanır)
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
