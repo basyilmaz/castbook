@@ -65,6 +65,16 @@ Route::get('/debug-session', function () {
     ]);
 });
 
+// Test login - doğrudan login yap ve dashboard'a yönlendir
+Route::get('/test-login', function () {
+    $user = \App\Models\User::where('email', 'muhasebe@example.com')->first();
+    if ($user) {
+        \Illuminate\Support\Facades\Auth::login($user, true);
+        return redirect('/debug-session');
+    }
+    return 'User not found';
+});
+
 // Sitemap for SEO
 Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
 
