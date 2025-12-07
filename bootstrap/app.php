@@ -11,6 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Trust all proxies (for Railway, Heroku, etc.)
+        $middleware->trustProxies(at: '*');
+        
         // Global middleware (tüm isteklere uygulanır)
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         
