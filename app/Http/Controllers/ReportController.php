@@ -24,9 +24,9 @@ class ReportController extends Controller
             ->when($status, fn ($query) => $query->where('status', $status));
 
         $transactionTotals = DB::table('transactions')
-            ->selectRaw('firm_id,
-                SUM(CASE WHEN type = "debit" THEN amount ELSE 0 END) AS debit_total,
-                SUM(CASE WHEN type = "credit" THEN amount ELSE 0 END) AS credit_total')
+            ->selectRaw("firm_id,
+                SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END) AS debit_total,
+                SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END) AS credit_total")
             ->groupBy('firm_id');
 
         $firms = (clone $baseQuery)
@@ -44,10 +44,10 @@ class ReportController extends Controller
         $totalsRow = DB::table('transactions')
             ->join('firms', 'firms.id', '=', 'transactions.firm_id')
             ->when($status, fn ($query) => $query->where('firms.status', $status))
-            ->selectRaw('
-                SUM(CASE WHEN transactions.type = "debit" THEN transactions.amount ELSE 0 END) AS debit_total,
-                SUM(CASE WHEN transactions.type = "credit" THEN transactions.amount ELSE 0 END) AS credit_total
-            ')
+            ->selectRaw("
+                SUM(CASE WHEN transactions.type = 'debit' THEN transactions.amount ELSE 0 END) AS debit_total,
+                SUM(CASE WHEN transactions.type = 'credit' THEN transactions.amount ELSE 0 END) AS credit_total
+            ")
             ->first();
 
         $totals = [
@@ -67,9 +67,9 @@ class ReportController extends Controller
         $status = $request->get('status');
 
         $transactionTotals = DB::table('transactions')
-            ->selectRaw('firm_id,
-                SUM(CASE WHEN type = "debit" THEN amount ELSE 0 END) AS debit_total,
-                SUM(CASE WHEN type = "credit" THEN amount ELSE 0 END) AS credit_total')
+            ->selectRaw("firm_id,
+                SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END) AS debit_total,
+                SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END) AS credit_total")
             ->groupBy('firm_id');
 
         $firms = Firm::query()
@@ -258,8 +258,8 @@ class ReportController extends Controller
         $summaryRow = (clone $baseQuery)
             ->selectRaw('COUNT(*) AS count')
             ->selectRaw('SUM(amount) AS total_amount')
-            ->selectRaw('SUM(CASE WHEN status = "paid" THEN amount ELSE 0 END) AS paid_amount')
-            ->selectRaw('SUM(CASE WHEN status = "unpaid" THEN amount ELSE 0 END) AS unpaid_amount')
+            ->selectRaw("SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS paid_amount")
+            ->selectRaw("SUM(CASE WHEN status = 'unpaid' THEN amount ELSE 0 END) AS unpaid_amount")
             ->first();
 
         $statusBreakdown = (clone $baseQuery)
@@ -367,9 +367,9 @@ class ReportController extends Controller
         $status = $request->get('status');
 
         $transactionTotals = DB::table('transactions')
-            ->selectRaw('firm_id,
-                SUM(CASE WHEN type = "debit" THEN amount ELSE 0 END) AS debit_total,
-                SUM(CASE WHEN type = "credit" THEN amount ELSE 0 END) AS credit_total')
+            ->selectRaw("firm_id,
+                SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END) AS debit_total,
+                SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END) AS credit_total")
             ->groupBy('firm_id');
 
         $firms = Firm::query()
