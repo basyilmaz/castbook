@@ -246,10 +246,10 @@
                                     <input type="checkbox" class="form-check-input declaration-checkbox" 
                                            value="{{ $declaration->id }}" data-id="{{ $declaration->id }}">
                                 </td>
-                                <td>{{ $declaration->firm->name }}</td>
+                                <td>{{ $declaration->firm?->name ?? 'Silinmiş Firma' }}</td>
                                 <td>
-                                    <strong>{{ $declaration->taxForm->code }}</strong>
-                                    <small class="text-muted d-block">{{ $declaration->taxForm->name }}</small>
+                                    <strong>{{ $declaration->taxForm?->code ?? '—' }}</strong>
+                                    <small class="text-muted d-block">{{ $declaration->taxForm?->name ?? 'Silinmiş Form' }}</small>
                                 </td>
                                 <td>{{ $declaration->period_label }}</td>
                                 <td>
