@@ -6,6 +6,7 @@ use App\Models\AuthToken;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class TokenAuthentication
@@ -16,22 +17,27 @@ class TokenAuthentication
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Mevcut IP adresi
-        $currentIp = $request->ip();
-
-        // Zaten authenticated ise sadece güvenlik header'larını ekle
+        // Zaten authenticated ise devam et
         if (Auth::check()) {
             return $this->addSecurityHeaders($next($request));
         }
 
         // Token'ı al: URL query, POST body veya session'dan
-        $token = $request->query('_auth')  // URL'den (GET)
-              ?? $request->input('_auth')   // Form body'den (POST)
-              ?? session('auth_token');     // Session'dan
+        $token = $request->query('_auth')   // URL'den (GET)
+              ?? $request->input('_auth')    // Form body'den (POST)
+              ?? session('auth_token');      // Session'dan
         
+        // Debug log
+        Log::info('TokenAuthentication', [
+            'has_token' => !empty($token),
+            'token_source' => $request->query('_auth') ? 'query' : ($request->input('_auth') ? 'input' : (session('auth_token') ? 'session' : 'none')),
+            'url' => $request->url(),
+            'method' => $request->method(),
+        ]);
+
         if ($token) {
-            // IP kontrolü ile token validation
-            $authToken = AuthToken::findValidToken($token, $currentIp);
+            // Token validation - IP kontrolü devre dışı (Railway proxy sorunu)
+            $authToken = AuthToken::findValidToken($token, null);
 
             if ($authToken) {
                 // Kullanıcıyı authenticate et
@@ -39,9 +45,12 @@ class TokenAuthentication
 
                 // Token'ı session'a kaydet
                 session(['auth_token' => $token]);
+                
+                Log::info('TokenAuthentication: User authenticated', ['user_id' => $authToken->user->id]);
             } else {
-                // Geçersiz token - session'dan temizle
+                // Geçersiz token
                 session()->forget('auth_token');
+                Log::warning('TokenAuthentication: Invalid token');
             }
         }
 

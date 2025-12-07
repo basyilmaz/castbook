@@ -9,10 +9,10 @@ use Illuminate\Support\Str;
 class AuthToken extends Model
 {
     // Token ömrü (dakika cinsinden)
-    public const TOKEN_LIFETIME_MINUTES = 120; // 2 saat
+    public const TOKEN_LIFETIME_MINUTES = 1440; // 24 saat
     
     // Aktivite sonrası uzatma süresi (dakika)
-    public const TOKEN_EXTEND_MINUTES = 30;
+    public const TOKEN_EXTEND_MINUTES = 120; // 2 saat
 
     protected $fillable = [
         'user_id',
@@ -94,7 +94,8 @@ class AuthToken extends Model
     }
 
     /**
-     * Token ile kullanıcıyı bul (IP kontrolü ile)
+     * Token ile kullanıcıyı bul
+     * IP kontrolü devre dışı - Railway proxy arkasında IP değişken
      */
     public static function findValidToken(string $token, ?string $currentIp = null): ?self
     {
@@ -106,13 +107,7 @@ class AuthToken extends Model
             return null;
         }
 
-        // IP kontrolü (opsiyonel ama önerilen)
-        if ($currentIp && !$authToken->matchesIp($currentIp)) {
-            // Farklı IP'den erişim - güvenlik için token'ı iptal et
-            $authToken->delete();
-            return null;
-        }
-
+        // IP kontrolü devre dışı - Railway'de proxy arkasında IP değişebilir
         // Token'ı kullanıldığında süresini uzat
         $authToken->extendExpiration();
 
