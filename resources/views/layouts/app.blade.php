@@ -39,6 +39,16 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script>
         document.documentElement.classList.remove('no-js');
+        
+        // URL'den _token parametresini temizle (güvenlik için)
+        (function() {
+            if (window.location.search.includes('_token=')) {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('_token');
+                const cleanUrl = url.pathname + (url.search || '') + (url.hash || '');
+                window.history.replaceState({}, document.title, cleanUrl || '/');
+            }
+        })();
     </script>
 </head>
 @php

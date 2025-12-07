@@ -85,12 +85,12 @@ class AuthToken extends Model
     }
 
     /**
-     * Güvenli token oluştur
+     * Güvenli token oluştur (kısa ama güvenli)
      */
     protected static function generateSecureToken(): string
     {
-        // Cryptographically secure random token
-        return bin2hex(random_bytes(32)); // 64 karakter hex
+        // 16 karakter - kısa URL için ama yeterince güvenli
+        return bin2hex(random_bytes(8)); // 16 karakter hex
     }
 
     /**

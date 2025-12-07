@@ -12,19 +12,20 @@ class TokenAuthentication
 {
     /**
      * URL'deki _token parametresi ile authentication yap
+     * Token bir kez URL'de gelir, session'a kaydedilir, sonra URL temizlenir
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Zaten authenticated ise devam et
-        if (Auth::check()) {
-            return $this->addSecurityHeaders($this->appendTokenToResponse($request, $next($request)));
-        }
-
         // Mevcut IP adresi
         $currentIp = $request->ip();
 
-        // URL'den token al
-        $token = $request->query('_token') ?? $request->cookie('auth_token');
+        // Zaten authenticated ise sadece güvenlik header'larını ekle
+        if (Auth::check()) {
+            return $this->addSecurityHeaders($next($request));
+        }
+
+        // URL'den token al (sadece ilk giriş için)
+        $token = $request->query('_token');
 
         if ($token) {
             // IP kontrolü ile token validation
@@ -42,7 +43,7 @@ class TokenAuthentication
             }
         }
 
-        // Session'dan token kontrol et
+        // Session'dan token kontrol et (normal navigasyon için)
         if (!Auth::check() && session('auth_token')) {
             $authToken = AuthToken::findValidToken(session('auth_token'), $currentIp);
             if ($authToken) {
@@ -53,7 +54,7 @@ class TokenAuthentication
             }
         }
 
-        return $this->addSecurityHeaders($this->appendTokenToResponse($request, $next($request)));
+        return $this->addSecurityHeaders($next($request));
     }
 
     /**
@@ -64,62 +65,10 @@ class TokenAuthentication
         // Token'ın dış sitelere sızmasını engelle
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         
-        // URL'in cache'lenmesini engelle (token içerdiği için)
-        if (session('auth_token')) {
+        // Authenticated sayfalar için cache'i devre dışı bırak
+        if (Auth::check()) {
             $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
             $response->headers->set('Pragma', 'no-cache');
-        }
-
-        return $response;
-    }
-
-    /**
-     * Response'daki tüm internal URL'lere token ekle
-     */
-    protected function appendTokenToResponse(Request $request, Response $response): Response
-    {
-        $token = session('auth_token');
-
-        if (!$token || !Auth::check()) {
-            return $response;
-        }
-
-        // HTML response ise URL'leri güncelle
-        if ($response->headers->get('Content-Type') && 
-            str_contains($response->headers->get('Content-Type'), 'text/html')) {
-            
-            $content = $response->getContent();
-            $baseUrl = config('app.url');
-
-            // href ve action URL'lerine token ekle
-            $content = preg_replace_callback(
-                '/(href|action)=["\'](' . preg_quote($baseUrl, '/') . '[^"\']*|\/[^"\']*)["\']/',
-                function ($matches) use ($token) {
-                    $url = $matches[2];
-                    
-                    // Dış linkler, asset'ler ve logout hariç
-                    if (preg_match('/\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)(\?|$)/', $url)) {
-                        return $matches[0];
-                    }
-                    
-                    // Logout için token ekleme
-                    if (str_contains($url, 'logout')) {
-                        return $matches[0];
-                    }
-
-                    // Token zaten varsa ekleme
-                    if (str_contains($url, '_token=')) {
-                        return $matches[0];
-                    }
-
-                    // Token ekle
-                    $separator = str_contains($url, '?') ? '&' : '?';
-                    return $matches[1] . '="' . $url . $separator . '_token=' . $token . '"';
-                },
-                $content
-            );
-
-            $response->setContent($content);
         }
 
         return $response;
