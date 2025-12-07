@@ -49,9 +49,10 @@ Route::get('/health', function () {
     ]);
 });
 
-// Cookie test - Laravel only
+// Cookie test - with explicit header
 Route::get('/cookie-test', function () {
-    return response('Cookie set! Check your cookies and Response Headers.')->cookie('laravel_test', 'works', 60);
+    $cookie = cookie('laravel_test', 'works', 60, '/', null, false, true, false, 'lax');
+    return response('Cookie set! Check Response Headers for Set-Cookie.')->withCookie($cookie);
 });
 
 // Debug routes with explicit web middleware
