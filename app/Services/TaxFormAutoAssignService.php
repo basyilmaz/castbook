@@ -43,7 +43,12 @@ class TaxFormAutoAssignService
      */
     public function assignDefaultForms(Firm $firm): array
     {
-        $companyType = $firm->company_type ?? 'limited';
+        // company_type enum objesi olabilir, string'e çevir
+        $companyType = $firm->company_type;
+        if (is_object($companyType)) {
+            $companyType = $companyType->value ?? (string) $companyType;
+        }
+        $companyType = $companyType ?? 'limited';
         $templateCodes = $this->templates[$companyType] ?? $this->templates['limited'];
 
         $assigned = [];

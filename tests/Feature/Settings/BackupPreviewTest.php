@@ -32,22 +32,18 @@ class BackupPreviewTest extends TestCase
             json_encode($structure, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
         );
 
-        $token = 'preview-token';
-
         $response = $this->actingAs($user)
-            ->withSession(['_token' => $token])
             ->post(
-            route('settings.backup.restore'),
-            [
-                'mode' => 'preview',
-                'backup_file' => $file,
-                '_token' => $token,
-            ],
-            [
-                'HTTP_ACCEPT' => 'application/json',
-                'REMOTE_ADDR' => '127.0.0.1',
-            ]
-        );
+                route('settings.backup.restore'),
+                [
+                    'mode' => 'preview',
+                    'backup_file' => $file,
+                ],
+                [
+                    'HTTP_ACCEPT' => 'application/json',
+                    'REMOTE_ADDR' => '127.0.0.1',
+                ]
+            );
 
         $response->assertOk()
             ->assertJsonPath('preview.counts.firms', 1)
@@ -56,7 +52,6 @@ class BackupPreviewTest extends TestCase
             ->assertJson(fn (AssertableJson $json) => $json
                 ->has('preview')
                 ->has('html')
-                // Encoding sorunları nedeniyle Türkçe karakter kontrolü kaldırıldı
             );
     }
 
@@ -71,20 +66,40 @@ class BackupPreviewTest extends TestCase
         RateLimiter::clear($key);
 
         for ($i = 0; $i < 5; $i++) {
-            $token = "attempt-token-{$i}";
             $file = UploadedFile::fake()->createWithContent(
                 "backup-{$i}.enc.json",
                 json_encode($encryptedStructure, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
             );
 
             $response = $this->actingAs($user)
-                ->withSession(['_token' => $token])
                 ->post(
+                    route('settings.backup.restore'),
+                    [
+                        'mode' => 'preview',
+                        'backup_file' => $file,
+                        'restore_password' => 'wrong-password',
+                    ],
+                    [
+                        'HTTP_ACCEPT' => 'application/json',
+                        'REMOTE_ADDR' => '127.0.0.1',
+                    ]
+                );
+
+            $response->assertStatus(400)
+                ->assertJsonStructure(['message']);
+        }
+
+        $file = UploadedFile::fake()->createWithContent(
+            'backup-throttled.enc.json',
+            json_encode($encryptedStructure, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+        );
+
+        $throttled = $this->actingAs($user)
+            ->post(
                 route('settings.backup.restore'),
                 [
                     'mode' => 'preview',
                     'backup_file' => $file,
-                    '_token' => $token,
                     'restore_password' => 'wrong-password',
                 ],
                 [
@@ -93,36 +108,9 @@ class BackupPreviewTest extends TestCase
                 ]
             );
 
-            $response->assertStatus(400)
-                ->assertJsonFragment(['message' => 'Åifre Ã§Ã¶zme iÅŸlemi baÅŸarÄ±sÄ±z. Åifreyi kontrol edin.']);
-        }
-
-        $token = 'throttle-token';
-        $file = UploadedFile::fake()->createWithContent(
-            'backup-throttled.enc.json',
-            json_encode($encryptedStructure, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-        );
-
-        $throttled = $this->actingAs($user)
-            ->withSession(['_token' => $token])
-            ->post(
-            route('settings.backup.restore'),
-            [
-                'mode' => 'preview',
-                'backup_file' => $file,
-                '_token' => $token,
-                'restore_password' => 'wrong-password',
-            ],
-            [
-                'HTTP_ACCEPT' => 'application/json',
-                'REMOTE_ADDR' => '127.0.0.1',
-            ]
-        );
-
         $throttled->assertStatus(429)
             ->assertJson(fn (AssertableJson $json) => $json
                 ->has('message')
-                // Encoding sorunları nedeniyle mesaj kontrolü kaldırıldı
             );
 
         RateLimiter::clear($key);

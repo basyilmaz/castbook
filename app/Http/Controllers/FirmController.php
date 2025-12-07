@@ -51,12 +51,17 @@ class FirmController extends Controller
         $firm = Firm::create($data);
 
         // Şirket türüne göre otomatik vergi formu ata
-        $autoAssignService = app(\App\Services\TaxFormAutoAssignService::class);
-        $result = $autoAssignService->assignDefaultForms($firm);
-
         $message = 'Firma başarıyla oluşturuldu.';
-        if (!empty($result['assigned'])) {
-            $message .= ' ' . count($result['assigned']) . ' vergi formu otomatik atandı.';
+        try {
+            $autoAssignService = app(\App\Services\TaxFormAutoAssignService::class);
+            $result = $autoAssignService->assignDefaultForms($firm);
+            
+            if (!empty($result['assigned'])) {
+                $message .= ' ' . count($result['assigned']) . ' vergi formu otomatik atandı.';
+            }
+        } catch (\Exception $e) {
+            // Hata olursa sessizce geç - firma yine de oluşturuldu
+            \Illuminate\Support\Facades\Log::warning('TaxFormAutoAssign failed: ' . $e->getMessage());
         }
 
         return redirect()
