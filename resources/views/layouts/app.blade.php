@@ -40,14 +40,72 @@
     <script>
         document.documentElement.classList.remove('no-js');
         
-        // URL'den _token parametresini temizle (güvenlik için)
+        // Token yönetimi (LocalStorage tabanlı)
         (function() {
-            if (window.location.search.includes('_token=')) {
-                const url = new URL(window.location.href);
-                url.searchParams.delete('_token');
-                const cleanUrl = url.pathname + (url.search || '') + (url.hash || '');
+            const TOKEN_KEY = 'auth_token';
+            
+            // URL'den token al ve localStorage'a kaydet
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlToken = urlParams.get('_token');
+            
+            if (urlToken) {
+                localStorage.setItem(TOKEN_KEY, urlToken);
+                // URL'den token'ı temizle
+                urlParams.delete('_token');
+                const cleanUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
                 window.history.replaceState({}, document.title, cleanUrl || '/');
             }
+            
+            // Sayfa yüklendikten sonra tüm linklere token ekle
+            document.addEventListener('DOMContentLoaded', function() {
+                const token = localStorage.getItem(TOKEN_KEY);
+                if (!token) return;
+                
+                // Tüm internal linklere token ekle
+                function addTokenToLinks() {
+                    document.querySelectorAll('a[href]').forEach(function(link) {
+                        const href = link.getAttribute('href');
+                        if (!href) return;
+                        
+                        // Dış linkler, asset'ler, logout, #hash linkler hariç
+                        if (href.startsWith('http') && !href.includes(window.location.host)) return;
+                        if (href.startsWith('#') || href.startsWith('javascript:')) return;
+                        if (href.includes('logout')) return;
+                        if (/\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|pdf)(\?|$)/.test(href)) return;
+                        if (href.includes('_token=')) return;
+                        
+                        // Token ekle
+                        const separator = href.includes('?') ? '&' : '?';
+                        link.setAttribute('href', href + separator + '_token=' + token);
+                    });
+                }
+                
+                // Form'lara hidden token field ekle
+                document.querySelectorAll('form').forEach(function(form) {
+                    const action = form.getAttribute('action') || '';
+                    if (action.includes('logout')) return;
+                    
+                    // Zaten token varsa ekleme
+                    if (form.querySelector('input[name="_token"][type="hidden"]:not([name="csrf-token"])')) return;
+                    
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = '_token';
+                    tokenInput.value = token;
+                    form.appendChild(tokenInput);
+                });
+                
+                addTokenToLinks();
+                
+                // Dinamik içerik için MutationObserver
+                const observer = new MutationObserver(addTokenToLinks);
+                observer.observe(document.body, { childList: true, subtree: true });
+            });
+            
+            // Logout olunca localStorage'ı temizle
+            window.clearAuthToken = function() {
+                localStorage.removeItem(TOKEN_KEY);
+            };
         })();
     </script>
 </head>
@@ -125,7 +183,7 @@
                 </div>
                 
                 {{-- Çıkış Butonu --}}
-                <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                <form method="POST" action="{{ route('logout') }}" class="d-inline" onsubmit="if(window.clearAuthToken) clearAuthToken();">
                     @csrf
                     <button type="submit" class="btn btn-outline-light btn-sm">
                         <i class="bi bi-box-arrow-right me-1"></i>Çıkış
