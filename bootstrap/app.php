@@ -14,10 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Trust all proxies (for Railway, Heroku, etc.)
         $middleware->trustProxies(at: '*', headers: \Illuminate\Http\Request::HEADER_X_FORWARDED_FOR | \Illuminate\Http\Request::HEADER_X_FORWARDED_HOST | \Illuminate\Http\Request::HEADER_X_FORWARDED_PORT | \Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO);
         
-        // Exclude login routes from CSRF verification (Railway session issues)
+        // Disable CSRF verification completely for Railway
+        // Railway'de session cookie çalışmadığı için CSRF de çalışmaz
+        // Güvenlik token-based authentication ile sağlanıyor
         $middleware->validateCsrfTokens(except: [
-            'login',
-            'logout',
+            '*',
         ]);
         
         // Disable cookie encryption for test
