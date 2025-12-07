@@ -49,14 +49,14 @@ Route::get('/health', function () {
     ]);
 });
 
-// Cookie test - with explicit header
-Route::get('/cookie-test', function () {
-    $cookie = cookie('laravel_test', 'works', 60, '/', null, false, true, false, 'lax');
-    return response('Cookie set! Check Response Headers for Set-Cookie.')->withCookie($cookie);
-});
-
 // Debug routes with explicit web middleware
 Route::middleware('web')->group(function () {
+    // Cookie test - with explicit header
+    Route::get('/cookie-test', function () {
+        $cookie = cookie('laravel_test', 'works', 60, '/', null, false, true, false, 'lax');
+        return response('Cookie set! Check Response Headers for Set-Cookie.')->withCookie($cookie);
+    });
+    
     // Debug route - session ve auth durumunu göster
     Route::get('/debug-session', function () {
         $user = \App\Models\User::where('email', 'muhasebe@example.com')->first();
