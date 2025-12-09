@@ -592,13 +592,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     dayDeclarations.forEach(d => {
                         let bgClass = 'bg-warning text-dark';
-                        if (d.status === 'submitted') bgClass = 'bg-success';
-                        else if (d.is_overdue) bgClass = 'bg-danger';
+                        if (d.status === 'submitted') bgClass = 'bg-success text-white';
+                        else if (d.is_overdue) bgClass = 'bg-danger text-white';
+                        
+                        // Firma adının kısaltması (ilk 8 karakter)
+                        const firmShort = d.firm_name ? d.firm_name.substring(0, 8) + (d.firm_name.length > 8 ? '..' : '') : '?';
                         
                         html += `<div class="badge ${bgClass} w-100 text-truncate declaration-pill mb-1" 
                                      title="${d.firm_name} - ${d.tax_form_code} (${d.period_label})"
-                                     data-id="${d.id}">
-                                    ${d.tax_form_code}
+                                     data-id="${d.id}"
+                                     style="font-size: 0.7rem; cursor: pointer;">
+                                    <span class="fw-normal">${firmShort}</span> ${d.tax_form_code}
                                 </div>`;
                     });
                     
