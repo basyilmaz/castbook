@@ -173,10 +173,8 @@
             <div class="card-footer bg-white">
                 <div class="d-flex flex-wrap gap-3 justify-content-center">
                     <small><span class="badge bg-warning">●</span> Bekliyor</small>
-                    <small><span class="badge bg-primary">●</span> Dosyalandı</small>
-                    <small><span class="badge bg-success">●</span> Ödendi</small>
+                    <small><span class="badge bg-success">●</span> Verildi</small>
                     <small><span class="badge bg-danger">●</span> Gecikmiş</small>
-                    <small><span class="badge bg-secondary">●</span> Gerekli Değil</small>
                 </div>
             </div>
         </div>
