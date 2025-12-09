@@ -25,6 +25,7 @@ class TaxDeclarationController extends Controller
 
         $query = TaxDeclaration::query()
             ->with(['firm:id,name', 'taxForm:id,code,name'])
+            ->whereHas('firm') // Silinen firmalar hariç
             ->when($filters['firm_id'] ?? null, fn ($q, $firmId) => $q->where('firm_id', $firmId))
             ->when($filters['tax_form_id'] ?? null, fn ($q, $formId) => $q->where('tax_form_id', $formId))
             ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
@@ -37,19 +38,22 @@ class TaxDeclarationController extends Controller
         $firms = Firm::orderBy('name')->get(['id', 'name']);
         $forms = TaxForm::active()->orderBy('code')->get(['id', 'code', 'name']);
 
-        // İstatistikler
+        // İstatistikler (sadece aktif firmalar)
         $today = Carbon::today();
         $stats = [
-            'total' => TaxDeclaration::count(),
-            'pending' => TaxDeclaration::where('status', 'pending')->count(),
-            'overdue' => TaxDeclaration::whereIn('status', ['pending', 'filed'])
+            'total' => TaxDeclaration::whereHas('firm')->count(),
+            'pending' => TaxDeclaration::whereHas('firm')->where('status', 'pending')->count(),
+            'overdue' => TaxDeclaration::whereHas('firm')
+                ->where('status', 'pending')
                 ->where('due_date', '<', $today)
                 ->count(),
-            'today' => TaxDeclaration::whereDate('due_date', $today)
-                ->whereIn('status', ['pending', 'filed'])
+            'today' => TaxDeclaration::whereHas('firm')
+                ->whereDate('due_date', $today)
+                ->where('status', 'pending')
                 ->count(),
-            'this_week' => TaxDeclaration::whereBetween('due_date', [$today, $today->copy()->addDays(7)])
-                ->whereIn('status', ['pending', 'filed'])
+            'this_week' => TaxDeclaration::whereHas('firm')
+                ->whereBetween('due_date', [$today, $today->copy()->addDays(7)])
+                ->where('status', 'pending')
                 ->count(),
         ];
 

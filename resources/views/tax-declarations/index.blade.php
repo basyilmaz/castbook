@@ -270,10 +270,12 @@
                                         @endif
                                     @endif
                                 </td>
+                                <td>
                                     <span class="badge bg-{{ $declaration->status === 'submitted' ? 'success' : 'warning text-dark' }} status-badge">
                                         {{ $declaration->status === 'submitted' ? 'Verildi' : 'Bekliyor' }}
                                     </span>
                                 </td>
+                                <td>
                                     <div class="form-check">
                                         <input type="checkbox" 
                                                class="form-check-input tax-status-quick-toggle" 
