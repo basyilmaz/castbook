@@ -79,6 +79,7 @@ class TaxDeclarationController extends Controller
 
         $declarations = TaxDeclaration::query()
             ->with(['firm:id,name', 'taxForm:id,code,name'])
+            ->whereHas('firm') // Silinen firmalar hariç
             ->whereNotNull('due_date')
             ->whereBetween('due_date', [$startDate, $endDate])
             ->get()
@@ -89,7 +90,7 @@ class TaxDeclarationController extends Controller
 
         foreach ($declarations as $date => $items) {
             $calendarData[$date] = $items->map(function ($d) use ($today) {
-                $isOverdue = $d->due_date && $d->due_date->lt($today) && in_array($d->status, ['pending', 'filed']);
+                $isOverdue = $d->due_date && $d->due_date->lt($today) && $d->status === 'pending';
                 
                 return [
                     'id' => $d->id,
