@@ -24,14 +24,14 @@
     {{-- İstatistik Kartları --}}
     <div class="row g-3 mb-4">
         <div class="col-md-3 col-6">
-            <div class="card border-0 shadow-sm h-100 bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                <div class="card-body text-white">
+            <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <div class="text-white-50 small text-uppercase">Toplam</div>
-                            <h3 class="mb-0 fw-bold">{{ $stats['total'] ?? 0 }}</h3>
+                            <div class="small text-uppercase" style="color: rgba(255,255,255,0.7);">Toplam</div>
+                            <h3 class="mb-0 fw-bold" style="color: #fff;">{{ $stats['total'] ?? 0 }}</h3>
                         </div>
-                        <i class="bi bi-file-earmark-text fs-1 opacity-50"></i>
+                        <i class="bi bi-file-earmark-text fs-1" style="color: rgba(255,255,255,0.5);"></i>
                     </div>
                 </div>
             </div>
