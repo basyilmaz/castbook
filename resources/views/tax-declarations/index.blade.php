@@ -191,17 +191,11 @@
                     <strong id="selectedCount">0</strong> beyanname seçildi
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn btn-success btn-sm" onclick="bulkUpdateStatus('submitted')">
+                        <i class="bi bi-check-circle me-1"></i>Verildi
+                    </button>
                     <button type="button" class="btn btn-warning btn-sm text-dark" onclick="bulkUpdateStatus('pending')">
                         <i class="bi bi-hourglass-split me-1"></i>Bekliyor
-                    </button>
-                    <button type="button" class="btn btn-info btn-sm text-white" onclick="bulkUpdateStatus('filed')">
-                        <i class="bi bi-file-check me-1"></i>Dosyalandı
-                    </button>
-                    <button type="button" class="btn btn-success btn-sm" onclick="bulkUpdateStatus('paid')">
-                        <i class="bi bi-check-circle me-1"></i>Ödendi
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="bulkUpdateStatus('not_required')">
-                        <i class="bi bi-x-circle me-1"></i>Gerekli Değil
                     </button>
                     <button type="button" class="btn btn-outline-light btn-sm" onclick="clearSelection()">
                         <i class="bi bi-x-lg"></i>
@@ -266,7 +260,7 @@
                                             @endif
                                         @endif
                                     </div>
-                                    @if($declaration->status !== 'paid' && $declaration->status !== 'not_required')
+                                    @if($declaration->status === 'pending')
                                         @if($isToday)
                                             <span class="badge bg-danger ms-1 pulse-badge">BUGÜN!</span>
                                         @elseif($isOverdue)
@@ -276,26 +270,19 @@
                                         @endif
                                     @endif
                                 </td>
-                                <td>
-                                    <span class="badge bg-{{ $declaration->status === 'paid' ? 'success' : ($declaration->status === 'filed' ? 'primary' : ($declaration->status === 'not_required' ? 'secondary' : 'warning text-dark')) }} status-badge">
-                                        {{ match($declaration->status) {
-                                            'pending' => 'Bekliyor',
-                                            'filed' => 'Dosyalandı',
-                                            'paid' => 'Ödendi',
-                                            'not_required' => 'Gerekli Değil',
-                                            default => $declaration->status
-                                        } }}
+                                    <span class="badge bg-{{ $declaration->status === 'submitted' ? 'success' : 'warning text-dark' }} status-badge">
+                                        {{ $declaration->status === 'submitted' ? 'Verildi' : 'Bekliyor' }}
                                     </span>
                                 </td>
-                                <td>
-                                    <select class="form-select form-select-sm tax-status-quick-select" 
-                                            data-declaration-id="{{ $declaration->id }}"
-                                            data-original-status="{{ $declaration->status }}">
-                                        <option value="pending" @selected($declaration->status === 'pending')>Bekliyor</option>
-                                        <option value="filed" @selected($declaration->status === 'filed')>Dosyalandı</option>
-                                        <option value="paid" @selected($declaration->status === 'paid')>Ödendi</option>
-                                        <option value="not_required" @selected($declaration->status === 'not_required')>Gerekli Değil</option>
-                                    </select>
+                                    <div class="form-check">
+                                        <input type="checkbox" 
+                                               class="form-check-input tax-status-quick-toggle" 
+                                               data-declaration-id="{{ $declaration->id }}"
+                                               {{ $declaration->status === 'submitted' ? 'checked' : '' }}
+                                               style="width: 1.3em; height: 1.3em; cursor: pointer;"
+                                               title="{{ $declaration->status === 'submitted' ? 'Verildi' : 'Bekliyor' }}">
+                                        <label class="form-check-label small">{{ $declaration->status === 'submitted' ? 'Verildi' : 'Bekliyor' }}</label>
+                                    </div>
                                 </td>
                                 <td class="text-center">
                                     <a href="{{ route('tax-declarations.edit', $declaration) }}" class="btn btn-sm btn-outline-primary">
@@ -463,53 +450,42 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Tek beyanname hızlı durum güncelleme
-    document.querySelectorAll('.tax-status-quick-select').forEach(selectEl => {
-        selectEl.addEventListener('change', function() {
+    // Tek beyanname hızlı durum toggle (checkbox)
+    document.querySelectorAll('.tax-status-quick-toggle').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
             const declarationId = this.dataset.declarationId;
-            const newStatus = this.value;
-            const originalStatus = this.dataset.originalStatus;
+            const newStatus = this.checked ? 'submitted' : 'pending';
             const row = this.closest('.tax-declaration-row');
+            const checkbox = this;
+            const label = row.querySelector('.form-check-label');
             
-            if (!confirm('Beyanname durumunu değiştirmek istediğinize emin misiniz?')) {
-                this.value = originalStatus;
-                return;
-            }
-            
-            this.disabled = true;
-            const self = this;
+            checkbox.disabled = true;
             
             axios.patch(`/tax-declarations/${declarationId}/status`, {
                 status: newStatus
             }).then(response => {
-                const badgeClass = newStatus === 'paid' ? 'success' : 
-                                 (newStatus === 'filed' ? 'primary' : 
-                                 (newStatus === 'not_required' ? 'secondary' : 'warning text-dark'));
-                const badgeText = newStatus === 'paid' ? 'Ödendi' :
-                                (newStatus === 'filed' ? 'Dosyalandı' :
-                                (newStatus === 'not_required' ? 'Gerekli Değil' : 'Bekliyor'));
-                
                 const badge = row.querySelector('.status-badge');
                 if (badge) {
-                    badge.className = `badge bg-${badgeClass} status-badge`;
-                    badge.textContent = badgeText;
+                    badge.className = `badge bg-${newStatus === 'submitted' ? 'success' : 'warning text-dark'} status-badge`;
+                    badge.textContent = newStatus === 'submitted' ? 'Verildi' : 'Bekliyor';
                 }
-                self.dataset.originalStatus = newStatus;
+                if (label) {
+                    label.textContent = newStatus === 'submitted' ? 'Verildi' : 'Bekliyor';
+                }
+                checkbox.title = newStatus === 'submitted' ? 'Verildi' : 'Bekliyor';
                 
-                if (typeof toastr !== 'undefined') {
-                    toastr.success(response.data.message || 'Durum güncellendi');
-                }
+                // Toast
+                const toast = document.createElement('div');
+                toast.className = 'alert alert-success position-fixed bottom-0 end-0 m-3 shadow';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = response.data.message;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
             }).catch(error => {
-                self.value = originalStatus;
-                const message = error.response?.data?.message || 'Bir hata oluştu';
-                
-                if (typeof toastr !== 'undefined') {
-                    toastr.error(message);
-                } else {
-                    alert(message);
-                }
+                checkbox.checked = !checkbox.checked; // Revert
+                alert(error.response?.data?.message || 'Bir hata oluştu');
             }).finally(() => {
-                self.disabled = false;
+                checkbox.disabled = false;
             });
         });
     });
@@ -616,9 +592,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     dayDeclarations.forEach(d => {
                         let bgClass = 'bg-warning text-dark';
-                        if (d.status === 'paid') bgClass = 'bg-success';
-                        else if (d.status === 'filed') bgClass = 'bg-primary';
-                        else if (d.status === 'not_required') bgClass = 'bg-secondary';
+                        if (d.status === 'submitted') bgClass = 'bg-success';
                         else if (d.is_overdue) bgClass = 'bg-danger';
                         
                         html += `<div class="badge ${bgClass} w-100 text-truncate declaration-pill mb-1" 
