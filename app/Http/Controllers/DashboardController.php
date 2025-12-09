@@ -94,7 +94,7 @@ class DashboardController extends Controller
             'total' => (clone $taxSummaryQuery)->count(),
             'pending' => (clone $taxSummaryQuery)->where('status', 'pending')->count(),
             'overdue' => (clone $taxSummaryQuery)
-                ->whereIn('status', ['pending', 'filed'])
+                ->where('status', 'pending')
                 ->where('due_date', '<', $now->toDateString())
                 ->count(),
         ];
@@ -108,10 +108,11 @@ class DashboardController extends Controller
         ];
 
 
-        // Yaklaşan beyannameler (bugün dahil 7 gün içinde) - Bugün olanlar önce
+        // Yaklaşan beyannameler (bugün dahil 7 gün içinde) - Sadece bekleyenler
         $upcomingDeclarations = TaxDeclaration::query()
             ->with(['firm:id,name', 'taxForm:id,code,name'])
-            ->whereIn('status', ['pending', 'filed'])
+            ->whereHas('firm') // Silinen firmalar hariç
+            ->where('status', 'pending')
             ->whereBetween('due_date', [
                 $now->toDateString(),
                 $now->copy()->addDays(7)->toDateString()
@@ -121,19 +122,21 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        // Bugün son günü olan beyanname sayısı
+        // Bugün son günü olan beyanname sayısı (sadece bekleyenler)
         $todayDueCount = TaxDeclaration::query()
-            ->whereIn('status', ['pending', 'filed'])
+            ->whereHas('firm') // Silinen firmalar hariç
+            ->where('status', 'pending')
             ->whereDate('due_date', $now->toDateString())
             ->count();
 
         // Metrics'e ekle (tax_summary altına)
         $taxSummary['today'] = $todayDueCount;
 
-        // Gecikmiş beyannameler (overdue)
+        // Gecikmiş beyannameler (sadece bekleyenler, silinen firmalar hariç)
         $overdueDeclarations = TaxDeclaration::query()
             ->with(['firm:id,name', 'taxForm:id,code,name'])
-            ->whereIn('status', ['pending', 'filed'])
+            ->whereHas('firm') // Silinen firmalar hariç
+            ->where('status', 'pending')
             ->where('due_date', '<', $now->toDateString())
             ->orderBy('due_date')
             ->get();

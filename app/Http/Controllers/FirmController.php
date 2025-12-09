@@ -110,13 +110,31 @@ class FirmController extends Controller
             ->with('status', 'Firma bilgileri güncellendi.');
     }
 
+    /**
+     * Firmayı ve tüm ilişkili verileri kalıcı olarak siler
+     */
     public function destroy(Firm $firm)
     {
-        $firm->delete();
+        $firmName = $firm->name;
+
+        // Tüm ilişkili verileri sil
+        $firm->taxDeclarations()->delete();
+        $firm->invoices()->each(function ($invoice) {
+            $invoice->payments()->delete();
+            $invoice->lineItems()->delete();
+            $invoice->transactions()->delete();
+            $invoice->forceDelete();
+        });
+        $firm->payments()->delete();
+        $firm->transactions()->delete();
+        $firm->taxForms()->detach();
+
+        // Firmayı kalıcı olarak sil
+        $firm->forceDelete();
 
         return redirect()
             ->route('firms.index')
-            ->with('status', 'Firma arşivlendi.');
+            ->with('status', "'{$firmName}' firması ve tüm verileri kalıcı olarak silindi.");
     }
 
     /**
@@ -231,5 +249,139 @@ class FirmController extends Controller
             'contract_start_at' => ['required', 'date', 'before_or_equal:today'],
             'notes' => ['nullable', 'string'],
         ]);
+    }
+
+    /**
+     * Toplu firma ekleme sayfası
+     */
+    public function import(): View
+    {
+        return view('firms.import');
+    }
+
+    /**
+     * Örnek CSV şablonu indir
+     */
+    public function importTemplate()
+    {
+        $headers = ['Firma Adı', 'Vergi No', 'Aylık Ücret', 'Yetkili', 'Telefon', 'E-posta', 'Adres', 'Şirket Türü', 'Notlar'];
+        $example = ['Örnek Firma Ltd. Şti.', '1234567890', '3500', 'Ahmet Yılmaz', '0532 123 4567', 'info@ornekfirma.com', 'İstanbul', 'limited', 'Örnek not'];
+
+        $content = implode(';', $headers) . "\n" . implode(';', $example);
+
+        return response($content, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="firma_sablonu.csv"',
+        ]);
+    }
+
+    /**
+     * CSV dosyasından firmaları içe aktar
+     */
+    public function importProcess(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        $file = $request->file('file');
+        $content = file_get_contents($file->getRealPath());
+        
+        // BOM karakterini kaldır
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+        
+        $lines = array_filter(explode("\n", $content));
+        
+        if (count($lines) < 2) {
+            return back()->withErrors(['file' => 'Dosya en az 2 satır içermelidir (başlık + veri).']);
+        }
+
+        // Ayraç tespit et
+        $separator = str_contains($lines[0], ';') ? ';' : ',';
+        
+        // Başlık satırını atla
+        array_shift($lines);
+
+        $created = 0;
+        $updated = 0;
+        $errors = [];
+
+        foreach ($lines as $index => $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
+
+            $data = str_getcsv($line, $separator);
+            
+            // Firma adı zorunlu
+            if (empty($data[0])) {
+                $errors[] = "Satır " . ($index + 2) . ": Firma adı boş olamaz.";
+                continue;
+            }
+
+            $firmData = [
+                'name' => trim($data[0]),
+                'tax_no' => ! empty($data[1]) ? trim($data[1]) : null,
+                'monthly_fee' => $this->parseNumber($data[2] ?? '0'),
+                'contact_person' => ! empty($data[3]) ? trim($data[3]) : null,
+                'contact_phone' => ! empty($data[4]) ? trim($data[4]) : null,
+                'contact_email' => ! empty($data[5]) ? trim($data[5]) : null,
+                'address' => ! empty($data[6]) ? trim($data[6]) : null,
+                'company_type' => $this->parseCompanyType($data[7] ?? ''),
+                'notes' => ! empty($data[8]) ? trim($data[8]) : null,
+                'status' => 'active',
+                'contract_start_at' => now()->toDateString(),
+            ];
+
+            // Var olan firmayı bul (vergi no veya isim ile)
+            $existing = null;
+            if (! empty($firmData['tax_no'])) {
+                $existing = Firm::where('tax_no', $firmData['tax_no'])->first();
+            }
+            if (! $existing) {
+                $existing = Firm::where('name', $firmData['name'])->first();
+            }
+
+            if ($existing) {
+                // Sadece boş olmayan alanları güncelle
+                $updateData = array_filter($firmData, fn($v) => $v !== null && $v !== '');
+                unset($updateData['status'], $updateData['contract_start_at']);
+                $existing->update($updateData);
+                $updated++;
+            } else {
+                Firm::create($firmData);
+                $created++;
+            }
+        }
+
+        $message = "{$created} firma eklendi";
+        if ($updated > 0) {
+            $message .= ", {$updated} firma güncellendi";
+        }
+        if (count($errors) > 0) {
+            $message .= ". " . count($errors) . " satırda hata oluştu.";
+        }
+
+        return redirect()
+            ->route('firms.index')
+            ->with('status', $message);
+    }
+
+    protected function parseNumber(string $value): float
+    {
+        // Türkçe format: 3.500,00 veya 3500
+        $value = trim($value);
+        $value = str_replace('.', '', $value); // Binlik ayracı kaldır
+        $value = str_replace(',', '.', $value); // Ondalık ayracı düzelt
+        return (float) preg_replace('/[^0-9.]/', '', $value);
+    }
+
+    protected function parseCompanyType(string $value): string
+    {
+        $value = strtolower(trim($value));
+        return match(true) {
+            str_contains($value, 'limited') || str_contains($value, 'ltd') => 'limited',
+            str_contains($value, 'anonim') || str_contains($value, 'a.ş') => 'joint_stock',
+            default => 'individual',
+        };
     }
 }

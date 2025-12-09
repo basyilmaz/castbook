@@ -82,11 +82,11 @@
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <form action="{{ route('firms.destroy', $firm) }}" method="POST" class="d-inline"
-                                          onsubmit="return confirm('Firmayı arşivlemek istediğinize emin misiniz?')">
+                                          onsubmit="return confirm('⚠️ DİKKAT!\n\n{{ $firm->name }} firması ve tüm verileri KALICI olarak silinecektir:\n\n• Tüm faturalar\n• Tüm ödemeler\n• Tüm beyannameler\n• Tüm cari işlemler\n\nBu işlem geri alınamaz!\n\nDevam etmek istiyor musunuz?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-archive"></i>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Firmayı Sil">
+                                            <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
                                 </td>
