@@ -192,6 +192,7 @@ class ReportController extends Controller
 
         $invoices = Invoice::query()
             ->with('firm')
+            ->whereHas('firm') // Silinen firmalar hariç
             ->whereIn('status', ['unpaid', 'partial'])
             ->where(function ($query) use ($today) {
                 $query->whereNotNull('due_date')
@@ -221,6 +222,7 @@ class ReportController extends Controller
 
         $invoices = Invoice::query()
             ->with('firm')
+            ->whereHas('firm') // Silinen firmalar hariç
             ->whereIn('status', ['unpaid', 'partial'])
             ->where(function ($query) use ($today) {
                 $query->whereNotNull('due_date')
@@ -252,6 +254,7 @@ class ReportController extends Controller
         $perPage = $this->perPage($request->integer('per_page'), [10, 25, 50, 100], 25);
 
         $baseQuery = Invoice::query()
+            ->whereHas('firm') // Silinen firmalar hariç
             ->when($selectedFirm, fn ($query, $firmId) => $query->where('firm_id', $firmId))
             ->whereYear('date', $year);
 
@@ -307,6 +310,7 @@ class ReportController extends Controller
 
         $invoices = Invoice::query()
             ->with('firm:id,name')
+            ->whereHas('firm') // Silinen firmalar hariç
             ->when($selectedFirm, fn ($query, $firmId) => $query->where('firm_id', $firmId))
             ->whereYear('date', $year)
             ->orderByDesc('date')
@@ -407,6 +411,7 @@ class ReportController extends Controller
 
         $invoices = Invoice::query()
             ->with('firm:id,name')
+            ->whereHas('firm') // Silinen firmalar hariç
             ->when($selectedFirm, fn ($query, $firmId) => $query->where('firm_id', $firmId))
             ->whereYear('date', $year)
             ->orderByDesc('date')
@@ -439,6 +444,7 @@ class ReportController extends Controller
 
         $invoices = Invoice::query()
             ->with('firm')
+            ->whereHas('firm') // Silinen firmalar hariç
             ->whereIn('status', ['unpaid', 'partial'])
             ->where(function ($query) use ($today) {
                 $query->whereNotNull('due_date')
