@@ -1,12 +1,8 @@
 @extends('layouts.app')
 
 @php
-    $statusLabels = [
-        'pending' => ['label' => 'Bekliyor', 'class' => 'warning text-dark'],
-        'filed' => ['label' => 'Dosyalandı', 'class' => 'primary'],
-        'paid' => ['label' => 'Ödendi', 'class' => 'success'],
-        'not_required' => ['label' => 'Gerekli Değil', 'class' => 'secondary'],
-    ];
+    use App\Support\DeclarationStatus;
+    $statusLabels = DeclarationStatus::all();
 @endphp
 
 @section('content')
@@ -166,26 +162,20 @@
                                     <td class="text-center">
                                         @if($decl)
                                             @php 
-                                                $s = $statusLabels[$decl->status] ?? $statusLabels['pending'];
-                                                $isCompleted = in_array($decl->status, ['paid', 'filed', 'not_required']);
+                                                $isSubmitted = $decl->status === 'submitted';
                                             @endphp
-                                            @if($isCompleted)
-                                                {{-- Verilmiş beyanname - Yeşil tik --}}
-                                                <a href="{{ route('tax-declarations.edit', $decl) }}" 
-                                                   class="text-success text-decoration-none"
-                                                   title="{{ $s['label'] }} - {{ $decl->due_date?->format('d.m.Y') ?? '' }}">
-                                                    <i class="bi bi-check-circle-fill fs-5"></i>
-                                                </a>
-                                            @else
-                                                {{-- Bekleyen beyanname - Badge --}}
-                                                <a href="{{ route('tax-declarations.edit', $decl) }}" 
-                                                   class="badge bg-{{ $s['class'] }} text-decoration-none"
-                                                   title="{{ $decl->due_date?->format('d.m.Y') ?? 'Tarih Yok' }}">
-                                                    {{ $s['label'] }}
-                                                </a>
-                                                @if($decl->isOverdue())
-                                                    <i class="bi bi-exclamation-circle-fill text-danger ms-1" title="Gecikmiş!"></i>
-                                                @endif
+                                            <div class="form-check d-inline-block">
+                                                <input type="checkbox" 
+                                                       class="form-check-input declaration-checkbox" 
+                                                       data-id="{{ $decl->id }}"
+                                                       data-form="{{ $decl->taxForm?->code }}"
+                                                       data-period="{{ $decl->period_label }}"
+                                                       {{ $isSubmitted ? 'checked' : '' }}
+                                                       title="{{ $isSubmitted ? 'Verildi' : 'Bekliyor' }} - {{ $decl->due_date?->format('d.m.Y') ?? '' }}"
+                                                       style="width: 1.3em; height: 1.3em; cursor: pointer;">
+                                            </div>
+                                            @if(!$isSubmitted && $decl->isOverdue())
+                                                <i class="bi bi-exclamation-circle-fill text-danger ms-1" title="Gecikmiş!"></i>
                                             @endif
                                         @else
                                             <span class="text-muted">-</span>
@@ -211,16 +201,18 @@
     </div>
     @endif
 
-    {{-- Renk Açıklaması --}}
+    {{-- Açıklama --}}
     <div class="card border-0 shadow-sm">
         <div class="card-body py-3">
             <div class="d-flex flex-wrap gap-4 justify-content-center align-items-center">
-                @foreach($statusLabels as $key => $s)
                 <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-{{ $s['class'] }}">●</span>
-                    <small class="text-muted">{{ $s['label'] }}</small>
+                    <input type="checkbox" class="form-check-input" checked disabled style="width: 1.2em; height: 1.2em;">
+                    <small class="text-muted">Verildi</small>
                 </div>
-                @endforeach
+                <div class="d-flex align-items-center gap-2">
+                    <input type="checkbox" class="form-check-input" disabled style="width: 1.2em; height: 1.2em;">
+                    <small class="text-muted">Bekliyor</small>
+                </div>
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-exclamation-circle-fill text-danger"></i>
                     <small class="text-muted">Gecikmiş</small>
@@ -229,4 +221,54 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Checkbox toggle handler
+    document.querySelectorAll('.declaration-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const id = this.dataset.id;
+            const newStatus = this.checked ? 'submitted' : 'pending';
+            const checkbox = this;
+            
+            // Disable during request
+            checkbox.disabled = true;
+            
+            // AJAX request
+            axios.patch(`/tax-declarations/${id}/status`, {
+                status: newStatus
+            }).then(response => {
+                checkbox.disabled = false;
+                checkbox.title = (newStatus === 'submitted' ? 'Verildi' : 'Bekliyor');
+                
+                // Update overdue icon
+                const cell = checkbox.closest('td');
+                const overdueIcon = cell.querySelector('.bi-exclamation-circle-fill');
+                if (newStatus === 'submitted' && overdueIcon) {
+                    overdueIcon.remove();
+                }
+                
+                // Show toast
+                showToast(response.data.message, 'success');
+            }).catch(error => {
+                checkbox.disabled = false;
+                checkbox.checked = !checkbox.checked; // Revert
+                showToast('İşlem başarısız oldu', 'danger');
+                console.error(error);
+            });
+        });
+    });
+    
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} position-fixed bottom-0 end-0 m-3 shadow`;
+        toast.style.zIndex = '9999';
+        toast.innerHTML = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+});
+</script>
+@endpush
 @endsection

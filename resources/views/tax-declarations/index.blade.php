@@ -128,9 +128,8 @@
                     <label class="form-label text-muted text-uppercase small">Durum</label>
                     <select name="status" class="form-select">
                         <option value="">Tümü</option>
-                        @foreach (['pending' => 'Bekliyor', 'filed' => 'Dosyalandı', 'paid' => 'Ödendi', 'not_required' => 'Gerekli Değil'] as $key => $label)
-                            <option value="{{ $key }}" @selected(($filters['status'] ?? null) === $key)>{{ $label }}</option>
-                        @endforeach
+                        <option value="pending" @selected(($filters['status'] ?? null) === 'pending')>Bekliyor</option>
+                        <option value="submitted" @selected(($filters['status'] ?? null) === 'submitted')>Verildi</option>
                     </select>
                 </div>
                 <div class="col-12 d-flex justify-content-end gap-2">

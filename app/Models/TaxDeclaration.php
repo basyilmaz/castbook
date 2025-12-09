@@ -50,7 +50,7 @@ class TaxDeclaration extends Model
         $today = Carbon::today();
 
         return $this->due_date && $today->greaterThan(Carbon::parse($this->due_date))
-            && in_array($this->status, ['pending', 'filed'], true);
+            && $this->status === 'pending';
     }
 
     /**

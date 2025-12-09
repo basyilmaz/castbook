@@ -5,7 +5,7 @@
     <div class="row mb-3">
         <div class="col">
             <h4 class="fw-semibold mb-0">Beyanname Düzenle</h4>
-            <small class="text-muted">Beyanname durumunu ve tarihlerini güncelleyin.</small>
+            <small class="text-muted">Beyanname durumunu güncelleyin.</small>
         </div>
     </div>
 
@@ -13,44 +13,46 @@
         <div class="card-body">
             <dl class="row mb-4">
                 <dt class="col-sm-3 text-muted">Firma</dt>
-                <dd class="col-sm-9">{{ $declaration->firm?->name }}</dd>
+                <dd class="col-sm-9">{{ $declaration->firm?->name ?? 'Silinmiş Firma' }}</dd>
 
                 <dt class="col-sm-3 text-muted">Beyanname</dt>
-                <dd class="col-sm-9">{{ $declaration->taxForm?->code }} - {{ $declaration->taxForm?->name }}</dd>
+                <dd class="col-sm-9">{{ $declaration->taxForm?->code ?? '—' }} - {{ $declaration->taxForm?->name ?? 'Silinmiş Form' }}</dd>
 
                 <dt class="col-sm-3 text-muted">Dönem</dt>
                 <dd class="col-sm-9">{{ $declaration->period_label }}</dd>
 
                 <dt class="col-sm-3 text-muted">Son Tarih</dt>
-                <dd class="col-sm-9">{{ $declaration->due_date?->format('Y-m-d') }}</dd>
+                <dd class="col-sm-9">{{ $declaration->due_date?->format('d.m.Y') ?? '-' }}</dd>
+                
+                @if($declaration->filed_at)
+                <dt class="col-sm-3 text-muted">Verilme Tarihi</dt>
+                <dd class="col-sm-9">{{ $declaration->filed_at->format('d.m.Y H:i') }}</dd>
+                @endif
             </dl>
 
             <form action="{{ route('tax-declarations.update', $declaration) }}" method="POST" class="row g-3">
                 @csrf
                 @method('PUT')
 
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label">Durum</label>
-                    <select name="status" class="form-select @error('status') is-invalid @enderror" required>
-                        @foreach (['pending' => 'Bekliyor', 'filed' => 'Dosyalandı', 'paid' => 'Ödendi', 'not_required' => 'Gerekli Değil'] as $key => $label)
-                            <option value="{{ $key }}" @selected(old('status', $declaration->status) === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-
-                <div class="col-md-4">
-                    <label class="form-label">Bildirim Tarihi</label>
-                    <input type="date" name="filed_at" class="form-control @error('filed_at') is-invalid @enderror"
-                           value="{{ old('filed_at', optional($declaration->filed_at)->format('Y-m-d')) }}">
-                    @error('filed_at')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-
-                <div class="col-md-4">
-                    <label class="form-label">Ödeme Tarihi</label>
-                    <input type="date" name="paid_at" class="form-control @error('paid_at') is-invalid @enderror"
-                           value="{{ old('paid_at', optional($declaration->paid_at)->format('Y-m-d')) }}">
-                    @error('paid_at')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="d-flex gap-3">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="status" id="status_pending" 
+                                   value="pending" @checked(old('status', $declaration->status) === 'pending')>
+                            <label class="form-check-label" for="status_pending">
+                                <span class="badge bg-warning text-dark">Bekliyor</span>
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="status" id="status_submitted" 
+                                   value="submitted" @checked(old('status', $declaration->status) === 'submitted')>
+                            <label class="form-check-label" for="status_submitted">
+                                <span class="badge bg-success">Verildi</span>
+                            </label>
+                        </div>
+                    </div>
+                    @error('status')<div class="text-danger small">{{ $message }}</div>@enderror
                 </div>
 
                 <div class="col-12">

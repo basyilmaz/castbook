@@ -117,18 +117,13 @@ class TaxDeclarationController extends Controller
     public function update(Request $request, TaxDeclaration $taxDeclaration): RedirectResponse
     {
         $data = $request->validate([
-            'status' => ['required', 'in:pending,filed,paid,not_required'],
-            'filed_at' => ['nullable', 'date'],
-            'paid_at' => ['nullable', 'date'],
+            'status' => ['required', 'in:pending,submitted'],
             'notes' => ['nullable', 'string'],
         ]);
 
-        if ($data['status'] === 'filed' && empty($data['filed_at'])) {
+        // Verildi işaretlenince tarih kaydet
+        if ($data['status'] === 'submitted' && !$taxDeclaration->filed_at) {
             $data['filed_at'] = now();
-        }
-
-        if ($data['status'] === 'paid' && empty($data['paid_at'])) {
-            $data['paid_at'] = now();
         }
 
         $taxDeclaration->update($data);
@@ -144,23 +139,19 @@ class TaxDeclarationController extends Controller
     public function updateStatus(Request $request, TaxDeclaration $taxDeclaration): JsonResponse
     {
         $data = $request->validate([
-            'status' => ['required', 'in:pending,filed,paid,not_required'],
+            'status' => ['required', 'in:pending,submitted'],
         ]);
 
-        // Otomatik tarih atamaları
-        if ($data['status'] === 'filed' && !$taxDeclaration->filed_at) {
+        // Verildi işaretlenince tarih kaydet
+        if ($data['status'] === 'submitted' && !$taxDeclaration->filed_at) {
             $data['filed_at'] = now();
-        }
-
-        if ($data['status'] === 'paid' && !$taxDeclaration->paid_at) {
-            $data['paid_at'] = now();
         }
 
         $taxDeclaration->update($data);
 
         return response()->json([
             'success' => true,
-            'message' => 'Durum güncellendi.',
+            'message' => $data['status'] === 'submitted' ? 'Beyanname verildi olarak işaretlendi.' : 'Beyanname bekliyor olarak işaretlendi.',
             'declaration' => $taxDeclaration->fresh(['taxForm']),
         ]);
     }
@@ -173,32 +164,23 @@ class TaxDeclarationController extends Controller
         $data = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['required', 'integer', 'exists:tax_declarations,id'],
-            'status' => ['required', 'in:pending,filed,paid,not_required'],
+            'status' => ['required', 'in:pending,submitted'],
         ]);
 
         $updateData = ['status' => $data['status']];
 
-        // Otomatik tarih atamaları
-        if ($data['status'] === 'filed') {
+        // Verildi işaretlenince tarih kaydet
+        if ($data['status'] === 'submitted') {
             $updateData['filed_at'] = now();
-        }
-
-        if ($data['status'] === 'paid') {
-            $updateData['paid_at'] = now();
         }
 
         $count = TaxDeclaration::whereIn('id', $data['ids'])->update($updateData);
 
-        $statusLabels = [
-            'pending' => 'Bekliyor',
-            'filed' => 'Dosyalandı',
-            'paid' => 'Ödendi',
-            'not_required' => 'Gerekli Değil',
-        ];
+        $statusLabel = $data['status'] === 'submitted' ? 'Verildi' : 'Bekliyor';
 
         return response()->json([
             'success' => true,
-            'message' => "{$count} beyanname '{$statusLabels[$data['status']]}' olarak güncellendi.",
+            'message' => "{$count} beyanname '{$statusLabel}' olarak güncellendi.",
             'updated_count' => $count,
         ]);
     }

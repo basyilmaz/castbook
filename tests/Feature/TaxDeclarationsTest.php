@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Firm;
-use App\Models\Invoice;
 use App\Models\TaxDeclaration;
 use App\Models\TaxForm;
 use App\Models\User;
@@ -34,11 +33,13 @@ class TaxDeclarationsTest extends TestCase
             'firm_id' => $firmA->id,
             'tax_form_id' => $form->id,
             'period_label' => '2025-01',
+            'status' => 'pending',
         ]);
         TaxDeclaration::factory()->create([
             'firm_id' => $firmB->id,
             'tax_form_id' => $form->id,
             'period_label' => '2025-02',
+            'status' => 'pending',
         ]);
 
         $response = $this->get(route('tax-declarations.index', [
@@ -51,7 +52,7 @@ class TaxDeclarationsTest extends TestCase
     }
 
     #[Test]
-    public function it_updates_status_to_filed_and_sets_filed_at(): void
+    public function it_updates_status_to_submitted_and_sets_filed_at(): void
     {
         $user = User::factory()->create(['is_active' => true]);
         $this->actingAs($user);
@@ -72,24 +73,22 @@ class TaxDeclarationsTest extends TestCase
         ]);
 
         $response = $this->put(route('tax-declarations.update', $declaration), [
-            'status' => 'filed',
-            'filed_at' => null,
-            'paid_at' => null,
-            'notes' => 'Test filed',
+            'status' => 'submitted',
+            'notes' => 'Verildi',
         ]);
 
         $response->assertRedirect(route('tax-declarations.index'));
 
         $this->assertDatabaseHas('tax_declarations', [
             'id' => $declaration->id,
-            'status' => 'filed',
+            'status' => 'submitted',
         ]);
 
         $this->assertNotNull(TaxDeclaration::find($declaration->id)->filed_at);
     }
 
     #[Test]
-    public function it_marks_declaration_as_not_required(): void
+    public function it_can_revert_status_to_pending(): void
     {
         $user = User::factory()->create(['is_active' => true]);
         $this->actingAs($user);
@@ -105,21 +104,52 @@ class TaxDeclarationsTest extends TestCase
         $declaration = TaxDeclaration::factory()->create([
             'firm_id' => $firm->id,
             'tax_form_id' => $form->id,
-            'status' => 'pending',
+            'status' => 'submitted',
         ]);
 
         $response = $this->put(route('tax-declarations.update', $declaration), [
-            'status' => 'not_required',
-            'filed_at' => null,
-            'paid_at' => null,
-            'notes' => 'Gerekli deÄŸil',
+            'status' => 'pending',
+            'notes' => 'Geri alındı',
         ]);
 
         $response->assertRedirect(route('tax-declarations.index'));
 
         $this->assertDatabaseHas('tax_declarations', [
             'id' => $declaration->id,
-            'status' => 'not_required',
+            'status' => 'pending',
+        ]);
+    }
+
+    #[Test]
+    public function it_updates_status_via_ajax(): void
+    {
+        $user = User::factory()->create(['is_active' => true]);
+        $this->actingAs($user);
+
+        $firm = Firm::factory()->create();
+        $form = TaxForm::factory()->create([
+            'code' => 'KDV',
+            'name' => 'KDV',
+            'frequency' => 'monthly',
+            'default_due_day' => 26,
+        ]);
+
+        $declaration = TaxDeclaration::factory()->create([
+            'firm_id' => $firm->id,
+            'tax_form_id' => $form->id,
+            'status' => 'pending',
+        ]);
+
+        $response = $this->patchJson(route('tax-declarations.update-status', $declaration), [
+            'status' => 'submitted',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('tax_declarations', [
+            'id' => $declaration->id,
+            'status' => 'submitted',
         ]);
     }
 }
