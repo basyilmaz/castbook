@@ -41,7 +41,8 @@ class FirmController extends Controller
 
     public function create(): View
     {
-        return view('firms.create', ['firm' => new Firm()]);
+        $taxForms = \App\Models\TaxForm::active()->orderBy('code')->get();
+        return view('firms.create', ['firm' => new Firm(), 'taxForms' => $taxForms]);
     }
 
     public function store(Request $request)
@@ -50,18 +51,26 @@ class FirmController extends Controller
 
         $firm = Firm::create($data);
 
-        // Şirket türüne göre otomatik vergi formu ata
-        $message = 'Firma başarıyla oluşturuldu.';
-        try {
-            $autoAssignService = app(\App\Services\TaxFormAutoAssignService::class);
-            $result = $autoAssignService->assignDefaultForms($firm);
-            
-            if (!empty($result['assigned'])) {
-                $message .= ' ' . count($result['assigned']) . ' vergi formu otomatik atandı.';
+        // Formdan beyanname seçimi yapıldıysa onu kullan
+        $taxFormIds = $request->input('tax_forms', []);
+        
+        if (!empty($taxFormIds)) {
+            // Manuel seçim yapıldı
+            $this->syncTaxForms($firm, $taxFormIds);
+            $message = 'Firma başarıyla oluşturuldu. ' . count($taxFormIds) . ' beyanname türü atandı.';
+        } else {
+            // Otomatik ata (şirket türüne göre)
+            $message = 'Firma başarıyla oluşturuldu.';
+            try {
+                $autoAssignService = app(\App\Services\TaxFormAutoAssignService::class);
+                $result = $autoAssignService->assignDefaultForms($firm);
+                
+                if (!empty($result['assigned'])) {
+                    $message .= ' ' . count($result['assigned']) . ' vergi formu otomatik atandı.';
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('TaxFormAutoAssign failed: ' . $e->getMessage());
             }
-        } catch (\Exception $e) {
-            // Hata olursa sessizce geç - firma yine de oluşturuldu
-            \Illuminate\Support\Facades\Log::warning('TaxFormAutoAssign failed: ' . $e->getMessage());
         }
 
         return redirect()
@@ -90,7 +99,9 @@ class FirmController extends Controller
 
     public function edit(Firm $firm): View
     {
-        return view('firms.edit', compact('firm'));
+        $taxForms = \App\Models\TaxForm::active()->orderBy('code')->get();
+        $firm->load('taxForms');
+        return view('firms.edit', compact('firm', 'taxForms'));
     }
 
     public function update(Request $request, Firm $firm)
@@ -104,6 +115,10 @@ class FirmController extends Controller
         if ($originalStart?->ne($firm->contract_start_at)) {
             $firm->forceFill(['initial_debt_synced_at' => null])->save();
         }
+
+        // Beyanname türlerini senkronize et
+        $taxFormIds = $request->input('tax_forms', []);
+        $this->syncTaxForms($firm, $taxFormIds);
 
         return redirect()
             ->route('firms.show', $firm)
@@ -389,5 +404,19 @@ class FirmController extends Controller
             str_contains($value, 'anonim') || str_contains($value, 'a.ş') => 'joint_stock',
             default => 'individual',
         };
+    }
+
+    /**
+     * Firma için beyanname türlerini senkronize et
+     */
+    protected function syncTaxForms(Firm $firm, array $taxFormIds): void
+    {
+        // Mevcut ilişkileri temizle ve yenilerini ekle
+        $syncData = [];
+        foreach ($taxFormIds as $taxFormId) {
+            $syncData[$taxFormId] = ['is_active' => true];
+        }
+        
+        $firm->taxForms()->sync($syncData);
     }
 }

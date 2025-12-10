@@ -208,4 +208,144 @@ class TaxDeclarationController extends Controller
             'declarations' => $declarations,
         ]);
     }
+
+    /**
+     * Tek tip beyanname oluştur (belirli form için tüm firmalar)
+     */
+    public function generateSingle(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'tax_form_id' => ['required', 'exists:tax_forms,id'],
+            'year' => ['required', 'integer', 'min:2020', 'max:2030'],
+            'month' => ['required', 'integer', 'min:1', 'max:12'],
+        ]);
+
+        $taxForm = TaxForm::findOrFail($data['tax_form_id']);
+        $period = Carbon::createFromDate($data['year'], $data['month'], 1);
+
+        // Bu formu kullanan aktif firmalar
+        $firms = Firm::active()
+            ->where('tax_tracking_enabled', true)
+            ->whereHas('taxForms', fn($q) => $q->where('tax_form_id', $taxForm->id)->where('firm_tax_forms.is_active', true))
+            ->get();
+
+        $created = 0;
+        $skipped = 0;
+
+        foreach ($firms as $firm) {
+            $result = $this->createDeclarationForFirm($firm, $taxForm, $period);
+            if ($result === 'created') {
+                $created++;
+            } else {
+                $skipped++;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$taxForm->name}: {$created} beyanname oluşturuldu" . ($skipped > 0 ? ", {$skipped} zaten mevcuttu." : "."),
+            'created' => $created,
+            'skipped' => $skipped,
+        ]);
+    }
+
+    /**
+     * Tüm beyannameleri toplu oluştur (her firma için kendi aktif formları)
+     */
+    public function generateAll(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'year' => ['required', 'integer', 'min:2020', 'max:2030'],
+            'month' => ['required', 'integer', 'min:1', 'max:12'],
+        ]);
+
+        $period = Carbon::createFromDate($data['year'], $data['month'], 1);
+
+        // Aktif ve beyanname takibi açık firmalar
+        $firms = Firm::active()
+            ->where('tax_tracking_enabled', true)
+            ->with(['taxForms' => fn($q) => $q->where('is_active', true)])
+            ->get();
+
+        $totalCreated = 0;
+        $totalSkipped = 0;
+
+        foreach ($firms as $firm) {
+            foreach ($firm->taxForms as $taxForm) {
+                $result = $this->createDeclarationForFirm($firm, $taxForm, $period);
+                if ($result === 'created') {
+                    $totalCreated++;
+                } else {
+                    $totalSkipped++;
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$totalCreated} beyanname oluşturuldu" . ($totalSkipped > 0 ? ", {$totalSkipped} zaten mevcuttu." : "."),
+            'created' => $totalCreated,
+            'skipped' => $totalSkipped,
+        ]);
+    }
+
+    /**
+     * Firma için beyanname oluştur (varsa atla)
+     */
+    private function createDeclarationForFirm(Firm $firm, TaxForm $taxForm, Carbon $period): string
+    {
+        // Periyodu hesapla
+        $periodRange = $this->resolvePeriodRange($taxForm->frequency, $period);
+        if (!$periodRange) {
+            return 'skipped';
+        }
+
+        // Zaten var mı kontrol et
+        $exists = TaxDeclaration::where('firm_id', $firm->id)
+            ->where('tax_form_id', $taxForm->id)
+            ->where('period_start', $periodRange['start'])
+            ->where('period_end', $periodRange['end'])
+            ->exists();
+
+        if ($exists) {
+            return 'skipped';
+        }
+
+        // Son tarihi hesapla
+        $dueDate = $taxForm->getOfficialDueDate($periodRange['end'])
+            ?? $periodRange['end']->copy()->addMonth()->day($taxForm->default_due_day ?? 26);
+
+        TaxDeclaration::create([
+            'firm_id' => $firm->id,
+            'tax_form_id' => $taxForm->id,
+            'period_start' => $periodRange['start'],
+            'period_end' => $periodRange['end'],
+            'due_date' => $dueDate,
+            'status' => 'pending',
+        ]);
+
+        return 'created';
+    }
+
+    /**
+     * Frekansa göre dönem hesapla
+     */
+    private function resolvePeriodRange(string $frequency, Carbon $period): ?array
+    {
+        return match ($frequency) {
+            'monthly' => [
+                'start' => $period->copy()->startOfMonth(),
+                'end' => $period->copy()->endOfMonth(),
+            ],
+            'quarterly' => [
+                'start' => $period->copy()->firstOfQuarter(),
+                'end' => $period->copy()->lastOfQuarter(),
+            ],
+            'yearly' => [
+                'start' => $period->copy()->startOfYear(),
+                'end' => $period->copy()->endOfYear(),
+            ],
+            default => null,
+        };
+    }
 }

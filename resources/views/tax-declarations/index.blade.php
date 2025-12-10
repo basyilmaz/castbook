@@ -85,6 +85,60 @@
         </div>
     </div>
 
+    {{-- Toplu Beyanname Oluşturma --}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-lightning-charge me-2"></i>Toplu Beyanname Oluştur</h6>
+            <div class="d-flex gap-2 align-items-center">
+                <label class="form-label mb-0 me-2 small text-muted">Dönem:</label>
+                <select id="bulkPeriodMonth" class="form-select form-select-sm" style="width: auto;">
+                    @for($m = 1; $m <= 12; $m++)
+                        <option value="{{ $m }}" @selected($m == now()->month)>
+                            {{ Carbon::create()->month($m)->translatedFormat('F') }}
+                        </option>
+                    @endfor
+                </select>
+                <select id="bulkPeriodYear" class="form-select form-select-sm" style="width: auto;">
+                    @for($y = now()->year - 1; $y <= now()->year + 1; $y++)
+                        <option value="{{ $y }}" @selected($y == now()->year)>{{ $y }}</option>
+                    @endfor
+                </select>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                @foreach($forms as $form)
+                <div class="col-md-4 col-lg-3">
+                    <div class="card h-100 border-light">
+                        <div class="card-body text-center py-3">
+                            <h6 class="mb-1">{{ $form->name }}</h6>
+                            <small class="text-muted d-block mb-2">
+                                {{ $form->frequency === 'monthly' ? 'Aylık' : ($form->frequency === 'quarterly' ? '3 Aylık' : 'Yıllık') }}
+                            </small>
+                            <button type="button" 
+                                    class="btn btn-sm btn-outline-primary generate-single-btn"
+                                    data-form-id="{{ $form->id }}"
+                                    data-form-name="{{ $form->name }}">
+                                <i class="bi bi-plus-circle me-1"></i>Oluştur
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+            <hr class="my-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Toplu oluştur: Her firmanın aktif beyanname türleri oluşturulur.
+                </div>
+                <button type="button" class="btn btn-primary" id="generateAllBtn">
+                    <i class="bi bi-lightning-charge me-1"></i>Tüm Beyannameleri Toplu Oluştur
+                </button>
+            </div>
+        </div>
+    </div>
+
     {{-- Filtreler --}}
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
@@ -623,6 +677,62 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = `/tax-declarations/${id}/edit`;
             });
         });
+    }
+});
+
+// Toplu beyanname oluşturma
+document.querySelectorAll('.generate-single-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const formId = this.dataset.formId;
+        const formName = this.dataset.formName;
+        const month = document.getElementById('bulkPeriodMonth').value;
+        const year = document.getElementById('bulkPeriodYear').value;
+        
+        if (!confirm(`${formName} beyannamesi ${month}/${year} dönemi için oluşturulsun mu?`)) return;
+        
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        
+        try {
+            const response = await axios.post('{{ route("tax-declarations.generate-single") }}', {
+                tax_form_id: formId,
+                year: year,
+                month: month
+            });
+            
+            alert(response.data.message);
+            window.location.reload();
+        } catch (error) {
+            alert('Hata: ' + (error.response?.data?.message || error.message));
+        } finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Oluştur';
+        }
+    });
+});
+
+document.getElementById('generateAllBtn')?.addEventListener('click', async function() {
+    const month = document.getElementById('bulkPeriodMonth').value;
+    const year = document.getElementById('bulkPeriodYear').value;
+    
+    if (!confirm(`Tüm firmaların aktif beyannameleri ${month}/${year} dönemi için oluşturulsun mu?`)) return;
+    
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Oluşturuluyor...';
+    
+    try {
+        const response = await axios.post('{{ route("tax-declarations.generate-all") }}', {
+            year: year,
+            month: month
+        });
+        
+        alert(response.data.message);
+        window.location.reload();
+    } catch (error) {
+        alert('Hata: ' + (error.response?.data?.message || error.message));
+    } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="bi bi-lightning-charge me-1"></i>Tüm Beyannameleri Toplu Oluştur';
     }
 });
 </script>

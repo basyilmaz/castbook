@@ -149,6 +149,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->name('tax-declarations.bulk-status');
     Route::patch('tax-declarations/{taxDeclaration}/status', [TaxDeclarationController::class, 'updateStatus'])
         ->name('tax-declarations.update-status');
+    
+    // Toplu beyanname oluşturma
+    Route::post('tax-declarations/generate-single', [TaxDeclarationController::class, 'generateSingle'])
+        ->name('tax-declarations.generate-single');
+    Route::post('tax-declarations/generate-all', [TaxDeclarationController::class, 'generateAll'])
+        ->name('tax-declarations.generate-all');
 
     Route::resource('tax-declarations', TaxDeclarationController::class)
         ->only(['index', 'edit', 'update']);

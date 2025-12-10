@@ -117,6 +117,44 @@
     </div>
 </div>
 
+{{-- Beyanname Türleri --}}
+@if(isset($taxForms) && $taxForms->isNotEmpty())
+<div class="card mt-3 border-0 bg-light">
+    <div class="card-header bg-transparent">
+        <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Beyanname Türleri</h6>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">Bu firma için hangi beyannamelerin oluşturulacağını seçin:</p>
+        @php
+            $selectedTaxForms = old('tax_forms', $firm->taxForms?->pluck('id')->toArray() ?? []);
+        @endphp
+        <div class="row g-2">
+            @foreach($taxForms as $taxForm)
+                <div class="col-md-6 col-lg-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" 
+                               name="tax_forms[]" 
+                               value="{{ $taxForm->id }}" 
+                               id="tax_form_{{ $taxForm->id }}"
+                               @checked(in_array($taxForm->id, $selectedTaxForms))>
+                        <label class="form-check-label" for="tax_form_{{ $taxForm->id }}">
+                            <strong>{{ $taxForm->name }}</strong>
+                            <small class="text-muted d-block">
+                                {{ $taxForm->frequency === 'monthly' ? 'Aylık' : ($taxForm->frequency === 'quarterly' ? '3 Aylık' : 'Yıllık') }}
+                            </small>
+                        </label>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        <div class="form-text mt-2">
+            <i class="bi bi-info-circle me-1"></i>
+            Seçim yapmazsanız şirket türüne göre otomatik atama yapılır.
+        </div>
+    </div>
+</div>
+@endif
+
 {{-- KDV Varsayılanları --}}
 <div class="card mt-3 border-0 bg-light">
     <div class="card-header bg-transparent">
