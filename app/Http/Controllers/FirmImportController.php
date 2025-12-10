@@ -163,6 +163,18 @@ class FirmImportController extends Controller
             'not' => 'notes',
             'notes' => 'notes',
             'notlar' => 'notes',
+            // Yeni alanlar
+            'sozlesme_baslangic' => 'contract_start_at',
+            'sözleşme_başlangıç' => 'contract_start_at',
+            'contract_start_at' => 'contract_start_at',
+            'otomatik_fatura' => 'auto_invoice_enabled',
+            'auto_invoice_enabled' => 'auto_invoice_enabled',
+            'beyanname_takibi' => 'tax_tracking_enabled',
+            'tax_tracking_enabled' => 'tax_tracking_enabled',
+            'kdv_orani' => 'default_vat_rate',
+            'default_vat_rate' => 'default_vat_rate',
+            'kdv_dahil' => 'default_vat_included',
+            'default_vat_included' => 'default_vat_included',
         ];
 
         DB::beginTransaction();
@@ -185,9 +197,41 @@ class FirmImportController extends Controller
                     continue;
                 }
 
-                // Aylık ücret düzenleme
+                // Aylik ücret düzenleme
                 if (isset($mapped['monthly_fee'])) {
                     $mapped['monthly_fee'] = (float) str_replace(['.', ',', '₺', ' '], ['', '.', '', ''], $mapped['monthly_fee']);
+                }
+
+                // Şirket türü normalize et
+                if (!empty($mapped['company_type'])) {
+                    $mapped['company_type'] = $this->normalizeCompanyType($mapped['company_type']);
+                }
+
+                // Sözleşme başlangıç tarihi
+                if (!empty($mapped['contract_start_at'])) {
+                    try {
+                        $mapped['contract_start_at'] = \Carbon\Carbon::parse($mapped['contract_start_at'])->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $mapped['contract_start_at'] = now()->format('Y-m-d');
+                    }
+                } else {
+                    $mapped['contract_start_at'] = now()->format('Y-m-d');
+                }
+
+                // Boolean alanlar
+                if (isset($mapped['auto_invoice_enabled'])) {
+                    $mapped['auto_invoice_enabled'] = $this->parseBooleanValue($mapped['auto_invoice_enabled']);
+                }
+                if (isset($mapped['tax_tracking_enabled'])) {
+                    $mapped['tax_tracking_enabled'] = $this->parseBooleanValue($mapped['tax_tracking_enabled']);
+                }
+                if (isset($mapped['default_vat_included'])) {
+                    $mapped['default_vat_included'] = $this->parseBooleanValue($mapped['default_vat_included']);
+                }
+
+                // KDV oranı
+                if (isset($mapped['default_vat_rate'])) {
+                    $mapped['default_vat_rate'] = (float) str_replace(['%', ','], ['', '.'], $mapped['default_vat_rate']);
                 }
 
                 // Validation
@@ -199,8 +243,13 @@ class FirmImportController extends Controller
                     'contact_phone' => 'nullable|string|max:50',
                     'contact_email' => 'nullable|email|max:255',
                     'address' => 'nullable|string|max:500',
-                    'company_type' => 'nullable|string|max:100',
+                    'company_type' => 'nullable|in:individual,limited,joint_stock',
                     'notes' => 'nullable|string|max:1000',
+                    'contract_start_at' => 'nullable|date',
+                    'auto_invoice_enabled' => 'nullable|boolean',
+                    'tax_tracking_enabled' => 'nullable|boolean',
+                    'default_vat_rate' => 'nullable|numeric|min:0|max:100',
+                    'default_vat_included' => 'nullable|boolean',
                 ]);
 
                 if ($validator->fails()) {
@@ -247,11 +296,12 @@ class FirmImportController extends Controller
             'Content-Disposition' => 'attachment; filename="firma_sablonu.csv"',
         ];
 
-        $columns = ['Firma Adı', 'Vergi No', 'Aylık Ücret', 'Yetkili', 'Telefon', 'E-posta', 'Adres', 'Şirket Türü', 'Notlar'];
+        $columns = ['Firma Adı', 'Vergi No', 'Şirket Türü', 'Aylık Ücret', 'Sözleşme Başlangıç', 'Yetkili', 'Telefon', 'E-posta', 'Otomatik Fatura', 'Beyanname Takibi', 'KDV Oranı', 'KDV Dahil', 'Notlar'];
         
         $exampleData = [
-            ['ABC Teknoloji A.Ş.', '1234567890', '3500', 'Ali Yılmaz', '0532 111 22 33', 'ali@abc.com', 'Kadıköy/İstanbul', 'Anonim Şirket', 'Yazılım firması'],
-            ['XYZ Ltd. Şti.', '9876543210', '2500', 'Ayşe Demir', '0533 444 55 66', 'ayse@xyz.com', 'Beşiktaş/İstanbul', 'Limited Şirket', ''],
+            ['ABC Teknoloji A.Ş.', '1234567890', 'Anonim Şirket', '3500', '2024-01-01', 'Ali Yılmaz', '0532 111 22 33', 'ali@abc.com', 'Evet', 'Evet', '20', 'Evet', 'Yazılım firması'],
+            ['XYZ Ltd. Şti.', '9876543210', 'Limited Şirket', '2500', '2024-06-15', 'Ayşe Demir', '0533 444 55 66', 'ayse@xyz.com', 'Evet', 'Evet', '20', 'Evet', ''],
+            ['Mehmet Danışmanlık', '5555555555', 'Şahıs', '1500', '2024-03-01', 'Mehmet Öz', '0544 777 88 99', 'mehmet@dan.com', 'Hayır', 'Evet', '10', 'Hayır', 'Serbest meslek'],
         ];
 
         return response()->streamDownload(function () use ($columns, $exampleData) {
@@ -267,5 +317,52 @@ class FirmImportController extends Controller
             
             fclose($output);
         }, 'firma_sablonu.csv', $headers);
+    }
+
+    /**
+     * Şirket türünü enum değerine normalize et
+     */
+    protected function normalizeCompanyType(string $value): string
+    {
+        $value = mb_strtolower(trim($value));
+        
+        $mapping = [
+            'şahıs' => 'individual',
+            'sahis' => 'individual',
+            'şahıs firması' => 'individual',
+            'bireysel' => 'individual',
+            'individual' => 'individual',
+            'gerçek kişi' => 'individual',
+            
+            'limited' => 'limited',
+            'ltd' => 'limited',
+            'limited şirket' => 'limited',
+            'ltd. şti.' => 'limited',
+            'ltd şti' => 'limited',
+            
+            'anonim' => 'joint_stock',
+            'a.ş.' => 'joint_stock',
+            'aş' => 'joint_stock',
+            'anonim şirket' => 'joint_stock',
+            'joint_stock' => 'joint_stock',
+        ];
+
+        return $mapping[$value] ?? 'limited'; // Varsayılan: limited
+    }
+
+    /**
+     * Boolean değeri parse et (Evet/Hayır, 1/0, true/false)
+     */
+    protected function parseBooleanValue($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        $value = mb_strtolower(trim((string) $value));
+        
+        $trueValues = ['1', 'true', 'yes', 'evet', 'e', 'açık', 'aktif'];
+        
+        return in_array($value, $trueValues);
     }
 }

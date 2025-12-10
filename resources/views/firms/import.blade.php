@@ -77,7 +77,15 @@
                                         <td><span class="badge bg-secondary">Hayır</span></td>
                                     </tr>
                                     <tr>
+                                        <td><code>Şirket Türü</code> <small class="text-muted">(Şahıs, Limited, Anonim)</small></td>
+                                        <td><span class="badge bg-secondary">Hayır</span></td>
+                                    </tr>
+                                    <tr>
                                         <td><code>Aylık Ücret</code></td>
+                                        <td><span class="badge bg-secondary">Hayır</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>Sözleşme Başlangıç</code> <small class="text-muted">(YYYY-MM-DD)</small></td>
                                         <td><span class="badge bg-secondary">Hayır</span></td>
                                     </tr>
                                     <tr>
@@ -85,19 +93,26 @@
                                         <td><span class="badge bg-secondary">Hayır</span></td>
                                     </tr>
                                     <tr>
-                                        <td><code>Telefon</code></td>
+                                        <td><code>Telefon</code> / <code>E-posta</code></td>
+                                        <td><span class="badge bg-secondary">Hayır</span></td>
+                                    </tr>
+                                    <tr class="table-info">
+                                        <td colspan="2"><strong class="text-primary">Otomasyon Ayarları</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>Otomatik Fatura</code> <small class="text-muted">(Evet/Hayır)</small></td>
                                         <td><span class="badge bg-secondary">Hayır</span></td>
                                     </tr>
                                     <tr>
-                                        <td><code>E-posta</code></td>
+                                        <td><code>Beyanname Takibi</code> <small class="text-muted">(Evet/Hayır)</small></td>
                                         <td><span class="badge bg-secondary">Hayır</span></td>
                                     </tr>
                                     <tr>
-                                        <td><code>Adres</code></td>
+                                        <td><code>KDV Oranı</code> <small class="text-muted">(0, 1, 10, 20)</small></td>
                                         <td><span class="badge bg-secondary">Hayır</span></td>
                                     </tr>
                                     <tr>
-                                        <td><code>Şirket Türü</code></td>
+                                        <td><code>KDV Dahil</code> <small class="text-muted">(Evet/Hayır)</small></td>
                                         <td><span class="badge bg-secondary">Hayır</span></td>
                                     </tr>
                                     <tr>
