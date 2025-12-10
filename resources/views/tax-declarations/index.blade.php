@@ -497,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
             status: status
         }).then(response => {
             if (response.data.success) {
-                window.location.reload();
+                reloadWithToken();
             }
         }).catch(error => {
             alert(error.response?.data?.message || 'Bir hata oluştu');
@@ -701,7 +701,8 @@ document.querySelectorAll('.generate-single-btn').forEach(btn => {
             });
             
             alert(response.data.message);
-            window.location.reload();
+            // Token ile sayfayı yenile (logout önleme)
+            reloadWithToken();
         } catch (error) {
             alert('Hata: ' + (error.response?.data?.message || error.message));
         } finally {
@@ -727,7 +728,8 @@ document.getElementById('generateAllBtn')?.addEventListener('click', async funct
         });
         
         alert(response.data.message);
-        window.location.reload();
+        // Token ile sayfayı yenile (logout önleme)
+        reloadWithToken();
     } catch (error) {
         alert('Hata: ' + (error.response?.data?.message || error.message));
     } finally {
@@ -735,6 +737,7 @@ document.getElementById('generateAllBtn')?.addEventListener('click', async funct
         this.innerHTML = '<i class="bi bi-lightning-charge me-1"></i>Tüm Beyannameleri Toplu Oluştur';
     }
 });
+
 </script>
 <style>
 .spin {

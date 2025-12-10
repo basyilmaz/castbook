@@ -157,6 +157,18 @@
             window.getAuthToken = function() {
                 return localStorage.getItem(TOKEN_KEY);
             };
+            
+            // Token ile sayfa yenileme (logout önleme)
+            window.reloadWithToken = function() {
+                const token = localStorage.getItem(TOKEN_KEY);
+                if (token) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set(URL_PARAM, token);
+                    window.location.href = url.toString();
+                } else {
+                    window.location.reload();
+                }
+            };
         })();
     </script>
 </head>
