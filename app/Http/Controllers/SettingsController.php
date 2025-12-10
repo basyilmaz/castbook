@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Firm;
 use App\Models\Invoice;
+use App\Models\InvoiceLineItem;
 use App\Models\Payment;
 use App\Models\Setting;
+use App\Models\TaxDeclaration;
+use App\Models\TaxForm;
+use App\Models\FirmTaxForm;
 use App\Services\BackupEncryptionService;
 use App\Models\Transaction;
 use Illuminate\Http\JsonResponse;
@@ -272,7 +276,11 @@ class SettingsController extends Controller
         $tables = [
             'transactions' => Transaction::class,
             'payments' => Payment::class,
+            'invoice_line_items' => InvoiceLineItem::class,
             'invoices' => Invoice::class,
+            'tax_declarations' => TaxDeclaration::class,
+            'firm_tax_forms' => FirmTaxForm::class,
+            'tax_forms' => TaxForm::class,
             'firms' => Firm::class,
             'settings' => Setting::class,
         ];
@@ -314,11 +322,12 @@ class SettingsController extends Controller
         DB::commit();
 
         $statusMessage = sprintf(
-            'Yedek başarıyla geri yüklendi. Firmalar: %d, Faturalar: %d, Tahsilatlar: %d, İşlemler: %d, Ayarlar: %d.',
+            'Yedek başarıyla geri yüklendi. Firmalar: %d, Faturalar: %d, Tahsilatlar: %d, İşlemler: %d, Beyannameler: %d, Ayarlar: %d.',
             $counts['firms'],
             $counts['invoices'],
             $counts['payments'],
             $counts['transactions'],
+            $counts['tax_declarations'],
             $counts['settings'],
         );
 
@@ -464,8 +473,12 @@ class SettingsController extends Controller
         return [
             'firms' => Firm::withTrashed()->get()->toArray(),
             'invoices' => Invoice::withTrashed()->get()->toArray(),
+            'invoice_line_items' => InvoiceLineItem::all()->toArray(),
             'payments' => Payment::withTrashed()->get()->toArray(),
             'transactions' => Transaction::withTrashed()->get()->toArray(),
+            'tax_forms' => TaxForm::all()->toArray(),
+            'firm_tax_forms' => FirmTaxForm::all()->toArray(),
+            'tax_declarations' => TaxDeclaration::all()->toArray(),
             'settings' => Setting::all()->toArray(),
         ];
     }
@@ -566,7 +579,7 @@ class SettingsController extends Controller
         $validator = Validator::make($data, $rules);
         $validator->validate();
 
-        foreach (['firms', 'invoices', 'payments', 'transactions', 'settings'] as $table) {
+        foreach (['firms', 'invoices', 'invoice_line_items', 'payments', 'transactions', 'tax_forms', 'firm_tax_forms', 'tax_declarations', 'settings'] as $table) {
             $data[$table] = array_values($data[$table] ?? []);
         }
 
@@ -578,8 +591,12 @@ class SettingsController extends Controller
         return [
             'firms' => count($data['firms'] ?? []),
             'invoices' => count($data['invoices'] ?? []),
+            'invoice_line_items' => count($data['invoice_line_items'] ?? []),
             'payments' => count($data['payments'] ?? []),
             'transactions' => count($data['transactions'] ?? []),
+            'tax_forms' => count($data['tax_forms'] ?? []),
+            'firm_tax_forms' => count($data['firm_tax_forms'] ?? []),
+            'tax_declarations' => count($data['tax_declarations'] ?? []),
             'settings' => count($data['settings'] ?? []),
         ];
     }
