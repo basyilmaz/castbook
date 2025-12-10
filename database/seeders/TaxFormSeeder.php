@@ -44,6 +44,16 @@ class TaxFormSeeder extends Seeder
             
             // 3 Aylık Beyannameler (Tüm firma türleri)
             [
+                'code' => 'Muhtasar-3A',
+                'name' => 'Muhtasar Beyannamesi (3 Aylık)',
+                'description' => 'Stopaj ve SGK primleri - 3 aylık dönem (Çalışanı olmayan veya az sayıda çalışanı olan firmalar)',
+                'frequency' => 'quarterly',
+                'default_due_day' => 26,
+                'is_active' => true,
+                'applicable_to' => ['individual', 'limited', 'joint_stock'],
+                'auto_assign' => false, // Manuel atama - firmaya göre seçilmeli
+            ],
+            [
                 'code' => 'Geçici Vergi',
                 'name' => 'Geçici Vergi Beyannamesi',
                 'description' => 'Üç aylık dönemler için geçici vergi beyannamesi',
