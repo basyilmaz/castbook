@@ -24,10 +24,12 @@ class TokenAuthentication
             return $this->addSecurityHeaders($this->appendTokenToRedirect($response));
         }
 
-        // Token'ı al: URL query, POST body veya session'dan
-        $token = $request->query('_auth')   // URL'den (GET)
-              ?? $request->input('_auth')    // Form body'den (POST)
-              ?? session('auth_token');      // Session'dan
+        // Token'ı al: URL query (GET/POST), POST body veya session'dan
+        // Axios interceptor params kullanıyor, bu query string'e gider
+        $token = $request->query('_auth')     // URL query string'den (GET veya POST)
+              ?? $request->input('_auth')     // Form body'den (POST)
+              ?? $request->header('X-Auth-Token')  // Header'dan (alternatif)
+              ?? session('auth_token');       // Session'dan
 
         if ($token) {
             // Token validation

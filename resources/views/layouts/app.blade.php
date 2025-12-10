@@ -79,8 +79,13 @@
                         window.axios.interceptors.request.use(function(config) {
                             const t = localStorage.getItem(TOKEN_KEY);
                             if (t) {
+                                // Query params'a ekle (GET ve POST için çalışır)
                                 config.params = config.params || {};
                                 config.params._auth = t;
+                                
+                                // Header'a da ekle (yedek olarak)
+                                config.headers = config.headers || {};
+                                config.headers['X-Auth-Token'] = t;
                             }
                             return config;
                         });
