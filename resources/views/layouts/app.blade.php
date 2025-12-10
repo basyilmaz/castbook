@@ -73,15 +73,33 @@
                 if (!token) return;
                 
                 // Global axios interceptor - tüm AJAX isteklerine token ekle
-                if (typeof axios !== 'undefined') {
-                    axios.interceptors.request.use(function(config) {
-                        const t = localStorage.getItem(TOKEN_KEY);
-                        if (t) {
-                            config.params = config.params || {};
-                            config.params._auth = t;
+                // Axios async yüklenebilir, birkaç kez kontrol et
+                function setupAxiosInterceptor() {
+                    if (typeof window.axios !== 'undefined' && window.axios.interceptors) {
+                        window.axios.interceptors.request.use(function(config) {
+                            const t = localStorage.getItem(TOKEN_KEY);
+                            if (t) {
+                                config.params = config.params || {};
+                                config.params._auth = t;
+                            }
+                            return config;
+                        });
+                        return true;
+                    }
+                    return false;
+                }
+                
+                // İlk deneme
+                if (!setupAxiosInterceptor()) {
+                    // Axios henüz yüklenmemiş, bekle ve tekrar dene
+                    let attempts = 0;
+                    const maxAttempts = 10;
+                    const interval = setInterval(function() {
+                        attempts++;
+                        if (setupAxiosInterceptor() || attempts >= maxAttempts) {
+                            clearInterval(interval);
                         }
-                        return config;
-                    });
+                    }, 100);
                 }
                 
                 // Tüm internal linklere token ekle
