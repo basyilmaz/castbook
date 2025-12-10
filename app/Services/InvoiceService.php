@@ -18,6 +18,7 @@ class InvoiceService
     {
         return Invoice::query()
             ->with('firm:id,name')
+            ->whereHas('firm') // Silinen firmalar hariç
             ->withSum('payments', 'amount')
             ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
             ->when($filters['firm_id'] ?? null, fn ($q, $firmId) => $q->where('firm_id', $firmId))
