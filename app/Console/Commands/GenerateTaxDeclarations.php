@@ -32,6 +32,10 @@ class GenerateTaxDeclarations extends Command
         $items = FirmTaxForm::query()
             ->with(['taxForm', 'firm'])
             ->whereHas('taxForm', fn ($q) => $q->where('is_active', true))
+            ->whereHas('firm', fn ($q) => $q
+                ->where('status', 'active')
+                ->where('tax_tracking_enabled', true)
+            )
             ->where('is_active', true)
             ->get();
 

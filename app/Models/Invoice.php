@@ -24,6 +24,11 @@ class Invoice extends Model
         'official_number',
         'status',
         'paid_at',
+        // KDV alanları
+        'vat_rate',
+        'vat_included',
+        'subtotal',
+        'vat_amount',
     ];
 
     protected $casts = [
@@ -31,6 +36,10 @@ class Invoice extends Model
         'due_date' => 'date',
         'paid_at' => 'datetime',
         'amount' => 'decimal:2',
+        'vat_rate' => 'decimal:2',
+        'vat_included' => 'boolean',
+        'subtotal' => 'decimal:2',
+        'vat_amount' => 'decimal:2',
     ];
 
     public function firm()
@@ -117,5 +126,47 @@ class Invoice extends Model
             'status' => 'partial',
             'paid_at' => null,
         ]);
+    }
+
+    /**
+     * KDV tutarlarını hesapla ve ayarla
+     * 
+     * @param float $amount Toplam tutar (KDV dahil veya hariç)
+     * @param float $vatRate KDV oranı (ör: 20.00)
+     * @param bool $vatIncluded Tutar KDV dahil mi?
+     */
+    public function calculateVat(float $amount, float $vatRate, bool $vatIncluded = true): void
+    {
+        $this->vat_rate = $vatRate;
+        $this->vat_included = $vatIncluded;
+
+        if ($vatIncluded) {
+            // KDV dahil: amount toplam, subtotal ve vat_amount hesaplanır
+            $this->amount = $amount;
+            $this->subtotal = round($amount / (1 + $vatRate / 100), 2);
+            $this->vat_amount = round($amount - $this->subtotal, 2);
+        } else {
+            // KDV hariç: amount net tutar, toplam = net + kdv
+            $this->subtotal = $amount;
+            $this->vat_amount = round($amount * $vatRate / 100, 2);
+            $this->amount = round($amount + $this->vat_amount, 2);
+        }
+    }
+
+    /**
+     * Formatlı KDV oranı (ör: "%20")
+     */
+    public function getFormattedVatRateAttribute(): string
+    {
+        $rate = (float) ($this->vat_rate ?? 0);
+        return '%' . number_format($rate, 0);
+    }
+
+    /**
+     * KDV tipi etiketi
+     */
+    public function getVatTypeLabel(): string
+    {
+        return $this->vat_included ? 'KDV Dahil' : 'KDV Hariç';
     }
 }

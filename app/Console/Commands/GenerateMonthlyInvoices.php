@@ -30,7 +30,10 @@ class GenerateMonthlyInvoices extends Command
         }
 
         $generator = new InvoiceGenerationService();
-        $firms = Firm::active()->get();
+        // Sadece auto_invoice_enabled = true olan aktif firmalar
+        $firms = Firm::active()
+            ->where('auto_invoice_enabled', true)
+            ->get();
 
         $createdInvoices = collect();
 

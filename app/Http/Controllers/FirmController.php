@@ -248,6 +248,12 @@ class FirmController extends Controller
             'status' => ['required', 'in:active,inactive'],
             'contract_start_at' => ['required', 'date', 'before_or_equal:today'],
             'notes' => ['nullable', 'string'],
+            // Otomasyon ayarları
+            'auto_invoice_enabled' => ['nullable', 'boolean'],
+            'tax_tracking_enabled' => ['nullable', 'boolean'],
+            // KDV varsayılanları
+            'default_vat_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'default_vat_included' => ['nullable', 'boolean'],
         ]);
     }
 

@@ -30,6 +30,12 @@ class Firm extends Model
         'notes',
         'contract_start_at',
         'initial_debt_synced_at',
+        // Otomasyon ayarları
+        'auto_invoice_enabled',
+        'tax_tracking_enabled',
+        // KDV varsayılanları
+        'default_vat_rate',
+        'default_vat_included',
     ];
 
     protected $casts = [
@@ -37,6 +43,10 @@ class Firm extends Model
         'monthly_fee' => 'decimal:2',
         'contract_start_at' => 'date',
         'initial_debt_synced_at' => 'datetime',
+        'auto_invoice_enabled' => 'boolean',
+        'tax_tracking_enabled' => 'boolean',
+        'default_vat_rate' => 'decimal:2',
+        'default_vat_included' => 'boolean',
     ];
 
     public function invoices()
@@ -92,5 +102,37 @@ class Firm extends Model
             ->first();
 
         return (float) ($history?->amount ?? $this->monthly_fee);
+    }
+
+    /**
+     * Otomatik fatura oluşturma aktif mi?
+     */
+    public function isAutoInvoiceEnabled(): bool
+    {
+        return (bool) ($this->auto_invoice_enabled ?? true);
+    }
+
+    /**
+     * Beyanname takibi aktif mi?
+     */
+    public function isTaxTrackingEnabled(): bool
+    {
+        return (bool) ($this->tax_tracking_enabled ?? true);
+    }
+
+    /**
+     * Varsayılan KDV oranını getir
+     */
+    public function getDefaultVatRate(): float
+    {
+        return (float) ($this->default_vat_rate ?? 20.00);
+    }
+
+    /**
+     * Varsayılan KDV dahil mi?
+     */
+    public function isDefaultVatIncluded(): bool
+    {
+        return (bool) ($this->default_vat_included ?? true);
     }
 }
