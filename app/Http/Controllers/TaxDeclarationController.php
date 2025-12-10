@@ -320,6 +320,7 @@ class TaxDeclarationController extends Controller
             'tax_form_id' => $taxForm->id,
             'period_start' => $periodRange['start'],
             'period_end' => $periodRange['end'],
+            'period_label' => $periodRange['label'],
             'due_date' => $dueDate,
             'status' => 'pending',
         ]);
@@ -332,20 +333,38 @@ class TaxDeclarationController extends Controller
      */
     private function resolvePeriodRange(string $frequency, Carbon $period): ?array
     {
+        $start = $period->copy()->startOfMonth();
+        
         return match ($frequency) {
             'monthly' => [
-                'start' => $period->copy()->startOfMonth(),
-                'end' => $period->copy()->endOfMonth(),
+                'start' => $start->copy(),
+                'end' => $start->copy()->endOfMonth(),
+                'label' => $start->format('m/Y'),
             ],
-            'quarterly' => [
-                'start' => $period->copy()->firstOfQuarter(),
-                'end' => $period->copy()->lastOfQuarter(),
-            ],
+            'quarterly' => $this->getQuarterRange($start),
             'yearly' => [
-                'start' => $period->copy()->startOfYear(),
-                'end' => $period->copy()->endOfYear(),
+                'start' => $start->copy()->startOfYear(),
+                'end' => $start->copy()->endOfYear(),
+                'label' => $start->format('Y'),
             ],
             default => null,
         };
+    }
+
+    /**
+     * Çeyrek dönem hesapla
+     */
+    private function getQuarterRange(Carbon $start): array
+    {
+        $quarter = (int) ceil($start->month / 3);
+        $quarterStartMonth = (($quarter - 1) * 3) + 1;
+        $quarterStart = Carbon::create($start->year, $quarterStartMonth, 1)->startOfMonth();
+        $quarterEnd = $quarterStart->copy()->addMonths(2)->endOfMonth();
+
+        return [
+            'start' => $quarterStart,
+            'end' => $quarterEnd,
+            'label' => sprintf('Q%d %d', $quarter, $start->year),
+        ];
     }
 }
