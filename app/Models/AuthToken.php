@@ -69,18 +69,22 @@ class AuthToken extends Model
 
     /**
      * Yeni bir auth token oluştur
+     * Çoklu cihaz desteği: Aynı kullanıcı birden fazla cihazdan giriş yapabilir
      */
     public static function createForUser(User $user, ?string $ipAddress = null, ?string $userAgent = null): self
     {
-        // Aynı kullanıcının eski token'larını temizle
-        static::where('user_id', $user->id)->delete();
+        // Eski token'ları silme - çoklu cihaz desteği için her giriş yeni token oluşturur
+        // Sadece süresi dolmuş olanları temizle (performans için)
+        static::where('user_id', $user->id)
+            ->where('expires_at', '<', now())
+            ->delete();
 
         return static::create([
             'user_id' => $user->id,
             'token' => self::generateSecureToken(),
             'expires_at' => now()->addMinutes(self::TOKEN_LIFETIME_MINUTES),
             'ip_address' => $ipAddress,
-            'user_agent' => $userAgent ? substr($userAgent, 0, 500) : null, // User agent max 500 karakter
+            'user_agent' => $userAgent ? substr($userAgent, 0, 500) : null,
         ]);
     }
 

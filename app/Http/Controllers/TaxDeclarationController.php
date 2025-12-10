@@ -264,7 +264,7 @@ class TaxDeclarationController extends Controller
         // Aktif ve beyanname takibi açık firmalar
         $firms = Firm::active()
             ->where('tax_tracking_enabled', true)
-            ->with(['taxForms' => fn($q) => $q->where('is_active', true)])
+            ->with(['taxForms' => fn($q) => $q->where('firm_tax_forms.is_active', true)])
             ->get();
 
         $totalCreated = 0;
