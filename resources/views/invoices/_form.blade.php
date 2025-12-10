@@ -48,6 +48,68 @@
 
     {{-- Toplam Tutar (Gizli - Line Items'dan hesaplanacak) --}}
     <input type="hidden" id="amount" name="amount" value="{{ old('amount', $invoice->amount ?? 0) }}">
+    <input type="hidden" id="subtotal" name="subtotal" value="{{ old('subtotal', $invoice->subtotal ?? 0) }}">
+    <input type="hidden" id="vat_amount" name="vat_amount" value="{{ old('vat_amount', $invoice->vat_amount ?? 0) }}">
+
+    {{-- KDV Ayarları --}}
+    <div class="col-12 mt-3">
+        <div class="card border bg-light">
+            <div class="card-body py-3">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="vat_rate">
+                            <i class="bi bi-percent me-1"></i>KDV Oranı
+                        </label>
+                        <select class="form-select @error('vat_rate') is-invalid @enderror" 
+                                id="vat_rate" name="vat_rate">
+                            @php
+                                $currentVat = old('vat_rate', $invoice->vat_rate ?? $selectedFirm->default_vat_rate ?? 20);
+                            @endphp
+                            <option value="0" @selected((float)$currentVat == 0)>%0 (KDV Yok)</option>
+                            <option value="1" @selected((float)$currentVat == 1)>%1</option>
+                            <option value="10" @selected((float)$currentVat == 10)>%10</option>
+                            <option value="20" @selected((float)$currentVat == 20)>%20</option>
+                        </select>
+                        @error('vat_rate')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">KDV Tipi</label>
+                        <div class="d-flex gap-3 pt-1">
+                            @php
+                                $vatIncluded = old('vat_included', $invoice->vat_included ?? $selectedFirm->default_vat_included ?? true);
+                            @endphp
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="vat_included" 
+                                       id="vat_included_yes" value="1" @checked($vatIncluded)>
+                                <label class="form-check-label" for="vat_included_yes">KDV Dahil</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="vat_included" 
+                                       id="vat_included_no" value="0" @checked(!$vatIncluded)>
+                                <label class="form-check-label" for="vat_included_no">KDV Hariç</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-end gap-4 text-end">
+                            <div>
+                                <small class="text-muted d-block">KDV Hariç</small>
+                                <span class="fs-5" id="subtotalDisplay">₺ 0,00</span>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">KDV Tutarı</small>
+                                <span class="fs-5 text-success" id="vatAmountDisplay">₺ 0,00</span>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">Toplam</small>
+                                <span class="fs-4 fw-bold text-primary" id="totalWithVatDisplay">₺ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {{-- Fatura Satır Kalemleri --}}
     @include('invoices._line_items')

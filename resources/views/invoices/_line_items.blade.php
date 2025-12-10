@@ -165,14 +165,51 @@ document.addEventListener('DOMContentLoaded', function() {
         return amount;
     }
 
-    // Genel toplamı hesapla
+    // KDV hesaplama elementleri
+    const vatRateSelect = document.getElementById('vat_rate');
+    const vatIncludedYes = document.getElementById('vat_included_yes');
+    const vatIncludedNo = document.getElementById('vat_included_no');
+    const subtotalInput = document.getElementById('subtotal');
+    const vatAmountInput = document.getElementById('vat_amount');
+    const subtotalDisplay = document.getElementById('subtotalDisplay');
+    const vatAmountDisplay = document.getElementById('vatAmountDisplay');
+    const totalWithVatDisplay = document.getElementById('totalWithVatDisplay');
+
+    // Genel toplamı ve KDV'yi hesapla
     function calculateGrandTotal() {
-        let total = 0;
+        let lineTotal = 0;
         lineItemsBody.querySelectorAll('.line-item-row').forEach(row => {
-            total += calculateLineAmount(row);
+            lineTotal += calculateLineAmount(row);
         });
         
-        grandTotalEl.textContent = formatMoney(total);
+        grandTotalEl.textContent = formatMoney(lineTotal);
+        
+        // KDV hesaplama
+        const vatRate = parseFloat(vatRateSelect?.value || 0);
+        const vatIncluded = vatIncludedYes?.checked ?? true;
+        
+        let subtotal, vatAmount, total;
+        
+        if (vatIncluded) {
+            // KDV dahil: lineTotal toplam, subtotal ve vatAmount hesaplanır
+            total = lineTotal;
+            subtotal = lineTotal / (1 + vatRate / 100);
+            vatAmount = total - subtotal;
+        } else {
+            // KDV hariç: lineTotal net tutar, toplam = net + kdv
+            subtotal = lineTotal;
+            vatAmount = lineTotal * vatRate / 100;
+            total = subtotal + vatAmount;
+        }
+        
+        // Görüntüleri güncelle
+        if (subtotalDisplay) subtotalDisplay.textContent = formatMoney(subtotal);
+        if (vatAmountDisplay) vatAmountDisplay.textContent = formatMoney(vatAmount);
+        if (totalWithVatDisplay) totalWithVatDisplay.textContent = formatMoney(total);
+        
+        // Hidden inputları güncelle
+        if (subtotalInput) subtotalInput.value = subtotal.toFixed(2);
+        if (vatAmountInput) vatAmountInput.value = vatAmount.toFixed(2);
         
         // Ana tutar alanını güncelle (checkbox işaretliyse)
         if (syncCheckbox && syncCheckbox.checked && amountInput) {
@@ -181,6 +218,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return total;
     }
+
+    // KDV değişikliklerini dinle
+    if (vatRateSelect) vatRateSelect.addEventListener('change', calculateGrandTotal);
+    if (vatIncludedYes) vatIncludedYes.addEventListener('change', calculateGrandTotal);
+    if (vatIncludedNo) vatIncludedNo.addEventListener('change', calculateGrandTotal);
 
     // Yeni satır ekle
     addLineItemBtn.addEventListener('click', function() {

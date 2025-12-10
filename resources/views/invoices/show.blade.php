@@ -131,8 +131,21 @@
                                 @endforeach
                             </tbody>
                             <tfoot class="table-light">
+                                @if ($invoice->vat_rate > 0)
                                 <tr>
-                                    <td colspan="3" class="text-end fw-semibold">Toplam:</td>
+                                    <td colspan="3" class="text-end">Ara Toplam:</td>
+                                    <td class="text-end">{{ Format::money($invoice->subtotal ?? $invoice->amount) }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end">
+                                        KDV ({{ $invoice->formatted_vat_rate }})
+                                        <small class="text-muted">{{ $invoice->vat_included ? 'dahil' : 'hariç' }}</small>
+                                    </td>
+                                    <td class="text-end text-success">{{ Format::money($invoice->vat_amount ?? 0) }}</td>
+                                </tr>
+                                @endif
+                                <tr class="table-primary">
+                                    <td colspan="3" class="text-end fw-semibold">Genel Toplam:</td>
                                     <td class="text-end fw-bold">{{ Format::money($invoice->amount) }}</td>
                                 </tr>
                             </tfoot>

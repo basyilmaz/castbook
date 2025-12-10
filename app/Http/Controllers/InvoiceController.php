@@ -46,7 +46,7 @@ class InvoiceController extends Controller
 
     public function create(Request $request): View
     {
-        $firms = Firm::active()->orderBy('name')->get(['id', 'name', 'monthly_fee']);
+        $firms = Firm::active()->orderBy('name')->get(['id', 'name', 'monthly_fee', 'default_vat_rate', 'default_vat_included']);
         $invoiceDate = Carbon::now()->startOfMonth();
         $dueDays = (int) Setting::getValue('invoice_default_due_days', 10);
 
@@ -59,11 +59,14 @@ class InvoiceController extends Controller
 
         $prefillFirmId = $request->integer('firm_id') ?: old('firm_id');
         $extraFields = collect();
+        $selectedFirm = null;
 
         if ($prefillFirmId) {
-            $firm = $firms->firstWhere('id', $prefillFirmId) ?? Firm::find($prefillFirmId);
-            if ($firm) {
-                $invoice->amount = $firm->priceForDate($invoiceDate);
+            $selectedFirm = $firms->firstWhere('id', $prefillFirmId) ?? Firm::find($prefillFirmId);
+            if ($selectedFirm) {
+                $invoice->amount = $selectedFirm->priceForDate($invoiceDate);
+                $invoice->vat_rate = $selectedFirm->default_vat_rate ?? 20;
+                $invoice->vat_included = $selectedFirm->default_vat_included ?? true;
             }
 
             $extraFields = InvoiceExtraField::query()
@@ -73,7 +76,7 @@ class InvoiceController extends Controller
                 ->get();
         }
 
-        return view('invoices.create', compact('invoice', 'firms', 'prefillFirmId', 'extraFields'));
+        return view('invoices.create', compact('invoice', 'firms', 'prefillFirmId', 'extraFields', 'selectedFirm'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -238,7 +241,8 @@ class InvoiceController extends Controller
                 ->withErrors(['invoice' => 'Ödenmiş veya kısmen ödenmiş faturalar düzenlenemez.']);
         }
 
-        $firms = Firm::orderBy('name')->get(['id', 'name', 'monthly_fee']);
+        $firms = Firm::orderBy('name')->get(['id', 'name', 'monthly_fee', 'default_vat_rate', 'default_vat_included']);
+        $selectedFirm = $invoice->firm;
 
         $extraFields = InvoiceExtraField::query()
             ->where('firm_id', $invoice->firm_id)
@@ -248,7 +252,7 @@ class InvoiceController extends Controller
 
         $invoice->loadMissing(['extraValues', 'lineItems']);
 
-        return view('invoices.edit', compact('invoice', 'firms', 'extraFields'));
+        return view('invoices.edit', compact('invoice', 'firms', 'extraFields', 'selectedFirm'));
     }
 
     public function update(Request $request, Invoice $invoice): RedirectResponse
@@ -516,6 +520,11 @@ class InvoiceController extends Controller
                 'max:50',
                 Rule::unique('invoices', 'official_number')->ignore($invoice?->id),
             ],
+            // KDV alanları
+            'vat_rate'        => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'vat_included'    => ['nullable', 'boolean'],
+            'subtotal'        => ['nullable', 'numeric', 'min:0'],
+            'vat_amount'      => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $data['status'] = $data['status'] ?? 'unpaid';
