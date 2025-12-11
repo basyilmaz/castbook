@@ -26,6 +26,7 @@ class PaymentController extends Controller
 
         $payments = Payment::query()
             ->with(['firm', 'invoice'])
+            ->whereHas('firm') // Sadece aktif firmaya ait ödemeler
             ->when($filters['firm_id'] ?? null, fn ($query, $firmId) => $query->where('firm_id', $firmId))
             ->when($filters['month'] ?? null, function ($query, $month) {
                 try {

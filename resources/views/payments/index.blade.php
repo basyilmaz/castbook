@@ -75,9 +75,13 @@
                             <tr>
                                 <td>{{ $payment->date?->format('d.m.Y') }}</td>
                                 <td>
-                                    <a href="{{ route('firms.show', $payment->firm) }}" class="text-decoration-none">
-                                        {{ $payment->firm->name }}
-                                    </a>
+                                    @if ($payment->firm)
+                                        <a href="{{ route('firms.show', $payment->firm) }}" class="text-decoration-none">
+                                            {{ $payment->firm->name }}
+                                        </a>
+                                    @else
+                                        <span class="text-muted">Silinmiş Firma</span>
+                                    @endif
                                 </td>
                                 <td>
                                     @if ($payment->invoice)
@@ -107,7 +111,9 @@
                                             <i class="bi bi-three-dots-vertical"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item" href="{{ route('firms.show', $payment->firm) }}"><i class="bi bi-eye me-2"></i>Görüntüle</a></li>
+                                            @if ($payment->firm)
+                                                <li><a class="dropdown-item" href="{{ route('firms.show', $payment->firm) }}"><i class="bi bi-eye me-2"></i>Görüntüle</a></li>
+                                            @endif
                                             <li>
                                                 <form action="{{ route('payments.destroy', $payment) }}" method="POST" onsubmit="return confirm('Bu tahsilat kaydını silmek istediğinize emin misiniz?')">
                                                     @csrf

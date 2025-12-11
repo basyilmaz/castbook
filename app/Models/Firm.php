@@ -18,6 +18,33 @@ class Firm extends Model
     use SoftDeletes;
     use \App\Traits\Auditable;
 
+    /**
+     * Boot metodu - Model event'leri
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Firma silindiğinde tüm ilişkili kayıtları da sil
+        static::deleting(function (Firm $firm) {
+            // Soft delete için: force delete yapılıyorsa ilişkileri de sil
+            // Normal soft delete için de ilişkiler silinsin
+            $firm->invoices()->each(function ($invoice) {
+                $invoice->payments()->delete();
+                $invoice->lineItems()->delete();
+                $invoice->delete();
+            });
+            
+            $firm->payments()->delete();
+            $firm->transactions()->delete();
+            $firm->taxDeclarations()->delete();
+            $firm->priceHistories()->delete();
+            
+            // Pivot tablodaki kayıtları sil
+            $firm->taxForms()->detach();
+        });
+    }
+
     protected $fillable = [
         'name',
         'company_type',
