@@ -7,9 +7,16 @@
             <h4 class="fw-semibold mb-0">Sistem Ayarları</h4>
             <small class="text-muted">Şirket bilgileri, fatura ayarları ve beyanname yönetimi</small>
         </div>
-        <a href="{{ route('settings.notifications') }}" class="btn btn-outline-primary">
-            <i class="bi bi-bell me-1"></i>Bildirim Ayarları
-        </a>
+        <div class="d-flex gap-2">
+            @if($isAdmin ?? false)
+            <a href="{{ route('users.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-people me-1"></i>Kullanıcılar
+            </a>
+            @endif
+            <a href="{{ route('settings.notifications') }}" class="btn btn-outline-primary">
+                <i class="bi bi-bell me-1"></i>Bildirim Ayarları
+            </a>
+        </div>
     </div>
 
     {{-- Tab Navigation --}}
