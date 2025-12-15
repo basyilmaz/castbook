@@ -83,10 +83,17 @@ class FirmStatementController extends Controller
         // PDF İndir
         if ($data['action'] === 'download') {
             $pdf = Pdf::loadView('firms.statement_pdf', $viewData)->setPaper('a4');
+            $pdfContent = $pdf->output();
             
-            return response($pdf->output(), 200)
-                ->header('Content-Type', 'application/pdf')
-                ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+            return response()->streamDownload(function () use ($pdfContent) {
+                echo $pdfContent;
+            }, $fileName, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma' => 'no-cache',
+                'Expires' => '0',
+            ]);
         }
 
         // Yazdır - HTML olarak tarayıcıda aç + otomatik yazdır
