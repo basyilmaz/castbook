@@ -97,8 +97,8 @@
     <table class="summary-table" style="margin-bottom: 12px;">
         <tr>
             <td style="width: 60%;">
-                @if (!empty($settings['company_logo_path']))
-                    <img src="{{ route('settings.logo', ['path' => $settings['company_logo_path']]) }}" 
+                @if (!empty($settings['company_logo_base64']))
+                    <img src="{{ $settings['company_logo_base64'] }}" 
                          alt="Logo" style="max-height: 50px; max-width: 150px; margin-bottom: 8px;">
                     <br>
                 @endif

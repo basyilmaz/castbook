@@ -76,14 +76,20 @@ class SettingsController extends Controller
         ]);
 
         if ($request->hasFile('company_logo')) {
+            $file = $request->file('company_logo');
+            $mimeType = $file->getMimeType();
+            $contents = file_get_contents($file->getRealPath());
+            $base64 = 'data:' . $mimeType . ';base64,' . base64_encode($contents);
+            
+            Setting::setValue('company_logo_base64', $base64);
+            Setting::setValue('company_logo_version', (string) now()->timestamp);
+            
+            // Eski path bazlı logo'yu temizle
             $oldLogo = Setting::getValue('company_logo_path');
             if ($oldLogo && Storage::disk('public')->exists($oldLogo)) {
                 Storage::disk('public')->delete($oldLogo);
             }
-
-            $logoPath = $request->file('company_logo')->store('logos', 'public');
-            Setting::setValue('company_logo_path', $logoPath);
-            Setting::setValue('company_logo_version', (string) now()->timestamp);
+            Setting::setValue('company_logo_path', '');
         }
 
         $keys = [

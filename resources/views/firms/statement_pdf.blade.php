@@ -1,16 +1,5 @@
 @php
     use App\Support\Format;
-    
-    // Logo için base64 encode
-    $logoBase64 = null;
-    if (!empty($settings['company_logo_path'])) {
-        $logoPath = storage_path('app/public/' . $settings['company_logo_path']);
-        if (file_exists($logoPath)) {
-            $logoData = file_get_contents($logoPath);
-            $logoMime = mime_content_type($logoPath);
-            $logoBase64 = 'data:' . $logoMime . ';base64,' . base64_encode($logoData);
-        }
-    }
 @endphp
 
 <!DOCTYPE html>
@@ -35,8 +24,8 @@
     <table class="no-border" style="margin-bottom: 12px;">
         <tr>
             <td style="width: 60%;">
-                @if($logoBase64)
-                    <img src="{{ $logoBase64 }}" alt="Logo" class="logo" style="margin-bottom: 8px;">
+                @if(!empty($settings['company_logo_base64']))
+                    <img src="{{ $settings['company_logo_base64'] }}" alt="Logo" class="logo" style="margin-bottom: 8px;">
                     <br>
                 @endif
                 <h3>{{ $settings['company_name'] ?? config('app.name') }}</h3>

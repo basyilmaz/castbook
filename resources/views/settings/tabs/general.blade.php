@@ -55,9 +55,9 @@
                     <label for="company_logo" class="form-label">Şirket Logosu</label>
                     <input type="file" class="form-control" id="company_logo" name="company_logo" accept="image/*">
                     <small class="text-muted">Maksimum 2MB, önerilen boyut: 200x50px</small>
-                    @if($settings['company_logo_path'] ?? false)
+                    @if($settings['company_logo_base64'] ?? false)
                         <div class="mt-2">
-                            <img src="{{ route('settings.logo', ['path' => $settings['company_logo_path']]) }}?v={{ $settings['company_logo_version'] ?? '1' }}" 
+                            <img src="{{ $settings['company_logo_base64'] }}" 
                                  alt="Logo" class="img-thumbnail" style="max-height: 50px;">
                         </div>
                     @endif

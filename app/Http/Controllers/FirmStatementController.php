@@ -68,7 +68,7 @@ class FirmStatementController extends Controller
             'company_address',
             'company_email',
             'company_phone',
-            'company_logo_path',
+            'company_logo_base64',
         ])->pluck('value', 'key');
 
         $viewData = [
