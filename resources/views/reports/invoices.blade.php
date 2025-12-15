@@ -187,7 +187,7 @@
             <div class="text-muted small">
                 Toplam {{ $invoices->total() }} kayıt · Sayfa {{ $invoices->currentPage() }} / {{ $invoices->lastPage() }}
             </div>
-            {{ $invoices->links() }}
+            {{ $invoices->appends(request()->query())->links('vendor.pagination.bootstrap-5-tr') }}
         </div>
     </div>
 </div>

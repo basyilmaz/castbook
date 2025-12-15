@@ -114,7 +114,7 @@
             <div class="text-muted small">
                 Toplam {{ $monthly->total() }} kayıt · Sayfa {{ $monthly->currentPage() }} / {{ $monthly->lastPage() }}
             </div>
-            {{ $monthly->links() }}
+            {{ $monthly->appends(request()->query())->links('vendor.pagination.bootstrap-5-tr') }}
         </div>
     </div>
 </div>

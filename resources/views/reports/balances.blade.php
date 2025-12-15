@@ -123,7 +123,7 @@
             <div class="text-muted small">
                 Toplam {{ $firms->total() }} kayıt · Sayfa {{ $firms->currentPage() }} / {{ $firms->lastPage() }}
             </div>
-            {{ $firms->links() }}
+            {{ $firms->appends(request()->query())->links('vendor.pagination.bootstrap-5-tr') }}
         </div>
     </div>
 </div>
