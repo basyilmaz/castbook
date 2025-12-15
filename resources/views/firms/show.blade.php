@@ -282,53 +282,123 @@
                     <h6 class="mb-0">Hesap Ekstresi</h6>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('firms.statement', $firm) }}" method="POST" class="row g-2" id="statementForm">
-                        @csrf
+                    <div class="row g-2">
                         <div class="col-6">
                             <label class="form-label small text-muted mb-1">Başlangıç</label>
-                            <input type="date" name="start_date" value="{{ old('start_date', now()->startOfMonth()->format('Y-m-d')) }}"
+                            <input type="date" id="statement_start_date" value="{{ now()->startOfMonth()->format('Y-m-d') }}"
                                    class="form-control form-control-sm" required>
                         </div>
                         <div class="col-6">
                             <label class="form-label small text-muted mb-1">Bitiş</label>
-                            <input type="date" name="end_date" value="{{ old('end_date', now()->format('Y-m-d')) }}"
+                            <input type="date" id="statement_end_date" value="{{ now()->format('Y-m-d') }}"
                                    class="form-control form-control-sm" required>
                         </div>
                         <div class="col-12">
                             <label class="form-label small text-muted mb-1">E-posta (Gönder için)</label>
-                            <input type="email" name="send_to" value="{{ old('send_to', $firm->contact_email) }}"
+                            <input type="email" id="statement_send_to" value="{{ $firm->contact_email }}"
                                    class="form-control form-control-sm" placeholder="E-posta adresi">
                         </div>
-                        <input type="hidden" name="action" id="statementAction" value="download">
                         <div class="col-4">
-                            <button type="submit" class="btn btn-outline-danger btn-sm w-100" onclick="setStatementAction('download')">
+                            <button type="button" class="btn btn-outline-danger btn-sm w-100" id="btnDownloadPdf" onclick="downloadStatementPdf()">
                                 <i class="bi bi-file-pdf me-1"></i>PDF
                             </button>
                         </div>
                         <div class="col-4">
-                            <button type="submit" class="btn btn-outline-primary btn-sm w-100" onclick="setStatementAction('email')">
+                            <button type="button" class="btn btn-outline-primary btn-sm w-100" onclick="sendStatementEmail()">
                                 <i class="bi bi-envelope me-1"></i>Gönder
                             </button>
                         </div>
                         <div class="col-4">
-                            <button type="submit" class="btn btn-outline-secondary btn-sm w-100" onclick="setStatementAction('print')">
+                            <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="printStatement()">
                                 <i class="bi bi-printer me-1"></i>Yazdır
                             </button>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
             
+            {{-- E-posta ve Yazdır için hidden form --}}
+            <form id="statementFormHidden" action="{{ route('firms.statement', $firm) }}" method="POST" style="display:none;">
+                @csrf
+                <input type="hidden" name="start_date" id="hidden_start_date">
+                <input type="hidden" name="end_date" id="hidden_end_date">
+                <input type="hidden" name="send_to" id="hidden_send_to">
+                <input type="hidden" name="action" id="hidden_action">
+            </form>
+            
             <script>
-            function setStatementAction(action) {
-                var form = document.getElementById('statementForm');
-                document.getElementById('statementAction').value = action;
+            // PDF İndir - Fetch API ile blob olarak
+            async function downloadStatementPdf() {
+                const startDate = document.getElementById('statement_start_date').value;
+                const endDate = document.getElementById('statement_end_date').value;
                 
-                if (action === 'print') {
-                    form.target = '_blank';
-                } else {
-                    form.target = '_self';
+                if (!startDate || !endDate) {
+                    alert('Lütfen tarih aralığı seçin.');
+                    return;
                 }
+                
+                const btn = document.getElementById('btnDownloadPdf');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Yükleniyor...';
+                btn.disabled = true;
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('_token', '{{ csrf_token() }}');
+                    formData.append('start_date', startDate);
+                    formData.append('end_date', endDate);
+                    formData.append('action', 'download');
+                    
+                    const response = await fetch('{{ route('firms.statement', $firm) }}', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('PDF oluşturulamadı');
+                    }
+                    
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'hesap-ekstresi-{{ $firm->id }}-' + startDate.replace(/-/g, '') + '-' + endDate.replace(/-/g, '') + '.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                } catch (error) {
+                    alert('PDF indirirken hata oluştu: ' + error.message);
+                } finally {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }
+            }
+            
+            // E-posta Gönder
+            function sendStatementEmail() {
+                const email = document.getElementById('statement_send_to').value;
+                if (!email) {
+                    alert('Lütfen e-posta adresi girin.');
+                    return;
+                }
+                
+                document.getElementById('hidden_start_date').value = document.getElementById('statement_start_date').value;
+                document.getElementById('hidden_end_date').value = document.getElementById('statement_end_date').value;
+                document.getElementById('hidden_send_to').value = email;
+                document.getElementById('hidden_action').value = 'email';
+                document.getElementById('statementFormHidden').target = '_self';
+                document.getElementById('statementFormHidden').submit();
+            }
+            
+            // Yazdır
+            function printStatement() {
+                document.getElementById('hidden_start_date').value = document.getElementById('statement_start_date').value;
+                document.getElementById('hidden_end_date').value = document.getElementById('statement_end_date').value;
+                document.getElementById('hidden_send_to').value = '';
+                document.getElementById('hidden_action').value = 'print';
+                document.getElementById('statementFormHidden').target = '_blank';
+                document.getElementById('statementFormHidden').submit();
             }
             </script>
         </div>
