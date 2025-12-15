@@ -1,5 +1,16 @@
 @php
     use App\Support\Format;
+    
+    // Logo için base64 encode
+    $logoBase64 = null;
+    if (!empty($settings['company_logo_path'])) {
+        $logoPath = storage_path('app/public/' . $settings['company_logo_path']);
+        if (file_exists($logoPath)) {
+            $logoData = file_get_contents($logoPath);
+            $logoMime = mime_content_type($logoPath);
+            $logoBase64 = 'data:' . $logoMime . ';base64,' . base64_encode($logoData);
+        }
+    }
 @endphp
 
 <!DOCTYPE html>
@@ -17,12 +28,17 @@
         .text-right { text-align: right; }
         .text-center { text-align: center; }
         .no-border td { border: none; padding: 3px 6px; }
+        .logo { max-height: 50px; max-width: 150px; }
     </style>
 </head>
 <body>
     <table class="no-border" style="margin-bottom: 12px;">
         <tr>
-            <td>
+            <td style="width: 60%;">
+                @if($logoBase64)
+                    <img src="{{ $logoBase64 }}" alt="Logo" class="logo" style="margin-bottom: 8px;">
+                    <br>
+                @endif
                 <h3>{{ $settings['company_name'] ?? config('app.name') }}</h3>
                 @if (!empty($settings['company_address']))
                     <div>{{ $settings['company_address'] }}</div>
@@ -34,11 +50,11 @@
                     <div>{{ $settings['company_phone'] }}</div>
                 @endif
             </td>
-            <td class="text-right">
+            <td class="text-right" style="width: 40%;">
                 <h3>Hesap Ekstresi</h3>
-                <div>{{ $firm->name }}</div>
+                <div style="font-size: 12px; font-weight: bold; margin: 5px 0;">{{ $firm->name }}</div>
                 <div>Dönem: {{ $summary['start']->format('d.m.Y') }} &mdash; {{ $summary['end']->format('d.m.Y') }}</div>
-                <div>Oluşturma: {{ now()->format('d.m.Y H:i') }}</div>
+                <div style="font-size: 9px; color: #666;">Oluşturma: {{ now()->format('d.m.Y H:i') }}</div>
             </td>
         </tr>
     </table>

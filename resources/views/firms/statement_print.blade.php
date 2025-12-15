@@ -96,7 +96,12 @@
     {{-- Header --}}
     <table class="summary-table" style="margin-bottom: 12px;">
         <tr>
-            <td>
+            <td style="width: 60%;">
+                @if (!empty($settings['company_logo_path']))
+                    <img src="{{ asset('storage/' . $settings['company_logo_path']) }}" 
+                         alt="Logo" style="max-height: 50px; max-width: 150px; margin-bottom: 8px;">
+                    <br>
+                @endif
                 <h3>{{ $settings['company_name'] ?? config('app.name') }}</h3>
                 @if (!empty($settings['company_address']))
                     <div>{{ $settings['company_address'] }}</div>
@@ -108,7 +113,7 @@
                     <div>{{ $settings['company_phone'] }}</div>
                 @endif
             </td>
-            <td class="text-right">
+            <td class="text-right" style="width: 40%;">
                 <h3>Hesap Ekstresi</h3>
                 <div><strong>{{ $firm->name }}</strong></div>
                 @if($firm->tax_no)
