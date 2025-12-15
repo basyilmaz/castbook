@@ -354,12 +354,29 @@
                         body: formData
                     });
                     
+                    // Content-Type kontrolü
+                    const contentType = response.headers.get('content-type');
+                    
                     if (!response.ok) {
-                        throw new Error('PDF oluşturulamadı');
+                        const errorText = await response.text();
+                        console.error('PDF Error:', errorText);
+                        throw new Error('PDF oluşturulamadı: ' + response.status);
+                    }
+                    
+                    // Eğer JSON dönüyorsa hata var demektir
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Bilinmeyen hata');
                     }
                     
                     const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
+                    
+                    // Blob boyutu kontrolü
+                    if (blob.size < 100) {
+                        throw new Error('PDF oluşturulamadı - dosya boş');
+                    }
+                    
+                    const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
                     const a = document.createElement('a');
                     a.href = url;
                     a.download = 'hesap-ekstresi-{{ $firm->id }}-' + startDate.replace(/-/g, '') + '-' + endDate.replace(/-/g, '') + '.pdf';
