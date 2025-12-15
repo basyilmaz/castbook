@@ -98,7 +98,7 @@
         <tr>
             <td style="width: 60%;">
                 @if (!empty($settings['company_logo_path']))
-                    <img src="{{ asset('storage/' . $settings['company_logo_path']) }}" 
+                    <img src="{{ route('settings.logo', ['path' => $settings['company_logo_path']]) }}" 
                          alt="Logo" style="max-height: 50px; max-width: 150px; margin-bottom: 8px;">
                     <br>
                 @endif
