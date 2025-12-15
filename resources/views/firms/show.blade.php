@@ -282,28 +282,37 @@
                     <h6 class="mb-0">Hesap Ekstresi</h6>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('firms.statement', $firm) }}" method="POST" class="row g-2">
+                    <form action="{{ route('firms.statement', $firm) }}" method="POST" class="row g-2" id="statementForm" target="_blank">
                         @csrf
                         <div class="col-6">
+                            <label class="form-label small text-muted mb-1">Başlangıç</label>
                             <input type="date" name="start_date" value="{{ old('start_date', now()->startOfMonth()->format('Y-m-d')) }}"
                                    class="form-control form-control-sm" required>
                         </div>
                         <div class="col-6">
+                            <label class="form-label small text-muted mb-1">Bitiş</label>
                             <input type="date" name="end_date" value="{{ old('end_date', now()->format('Y-m-d')) }}"
                                    class="form-control form-control-sm" required>
                         </div>
                         <div class="col-12">
+                            <label class="form-label small text-muted mb-1">E-posta (Gönder için)</label>
                             <input type="email" name="send_to" value="{{ old('send_to', $firm->contact_email) }}"
-                                   class="form-control form-control-sm" placeholder="E-posta (opsiyonel)">
+                                   class="form-control form-control-sm" placeholder="E-posta adresi">
                         </div>
-                        <div class="col-6">
-                            <button type="submit" name="action" value="download" class="btn btn-outline-secondary btn-sm w-100">
-                                <i class="bi bi-download me-1"></i>PDF
+                        <input type="hidden" name="action" id="statementAction" value="download">
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-outline-danger btn-sm w-100" onclick="document.getElementById('statementAction').value='download'; document.getElementById('statementForm').target='_blank';">
+                                <i class="bi bi-file-pdf me-1"></i>PDF
                             </button>
                         </div>
-                        <div class="col-6">
-                            <button type="submit" name="action" value="email" class="btn btn-outline-primary btn-sm w-100">
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-outline-primary btn-sm w-100" onclick="document.getElementById('statementAction').value='email'; document.getElementById('statementForm').target='_self';">
                                 <i class="bi bi-envelope me-1"></i>Gönder
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm w-100" onclick="document.getElementById('statementAction').value='print'; document.getElementById('statementForm').target='_blank';">
+                                <i class="bi bi-printer me-1"></i>Yazdır
                             </button>
                         </div>
                     </form>

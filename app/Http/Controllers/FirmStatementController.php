@@ -19,7 +19,7 @@ class FirmStatementController extends Controller
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'send_to' => ['nullable', 'email'],
-            'action' => ['required', 'in:download,email'],
+            'action' => ['required', 'in:download,email,print'],
         ]);
 
         $start = Carbon::parse($data['start_date'])->startOfDay();
@@ -71,25 +71,34 @@ class FirmStatementController extends Controller
             'company_logo_path',
         ])->pluck('value', 'key');
 
-        $pdf = Pdf::loadView('firms.statement_pdf', [
+        $viewData = [
             'firm' => $firm,
             'transactions' => $transactions,
             'summary' => $summary,
             'settings' => $settings,
-        ])->setPaper('a4');
+        ];
 
         $fileName = 'hesap-ekstresi-' . $firm->id . '-' . $start->format('Ymd') . '-' . $end->format('Ymd') . '.pdf';
 
+        // PDF İndir
         if ($data['action'] === 'download') {
+            $pdf = Pdf::loadView('firms.statement_pdf', $viewData)->setPaper('a4');
             return $pdf->download($fileName);
         }
 
+        // Yazdır - HTML olarak tarayıcıda aç + otomatik yazdır
+        if ($data['action'] === 'print') {
+            return view('firms.statement_print', $viewData);
+        }
+
+        // E-posta gönder
         $recipient = $data['send_to'] ?? $firm->contact_email;
 
         if (! $recipient) {
             return back()->withErrors(['send_to' => 'Gönderim için e-posta adresi gerekli.'])->withInput();
         }
 
+        $pdf = Pdf::loadView('firms.statement_pdf', $viewData)->setPaper('a4');
         Mail::to($recipient)->send(new FirmStatementMail($firm, $summary, $transactions, $pdf->output(), $fileName, $settings->toArray()));
 
         return back()->with('status', 'Hesap ekstresi e-posta ile gönderildi.');
