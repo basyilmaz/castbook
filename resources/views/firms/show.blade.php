@@ -278,7 +278,7 @@
             {{-- Hesap Ekstresi --}}
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white d-flex align-items-center gap-2">
-                    <i class="bi bi-file-earmark-pdf text-danger"></i>
+                    <i class="bi bi-file-earmark-text text-primary"></i>
                     <h6 class="mb-0">Hesap Ekstresi</h6>
                 </div>
                 <div class="card-body">
@@ -298,17 +298,12 @@
                             <input type="email" id="statement_send_to" value="{{ $firm->contact_email }}"
                                    class="form-control form-control-sm" placeholder="E-posta adresi">
                         </div>
-                        <div class="col-4">
-                            <button type="button" class="btn btn-outline-danger btn-sm w-100" id="btnDownloadPdf" onclick="downloadStatementPdf()">
-                                <i class="bi bi-file-pdf me-1"></i>PDF
-                            </button>
-                        </div>
-                        <div class="col-4">
+                        <div class="col-6">
                             <button type="button" class="btn btn-outline-primary btn-sm w-100" onclick="sendStatementEmail()">
                                 <i class="bi bi-envelope me-1"></i>Gönder
                             </button>
                         </div>
-                        <div class="col-4">
+                        <div class="col-6">
                             <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="printStatement()">
                                 <i class="bi bi-printer me-1"></i>Yazdır
                             </button>
@@ -327,71 +322,6 @@
             </form>
             
             <script>
-            // PDF İndir - Fetch API ile blob olarak
-            async function downloadStatementPdf() {
-                const startDate = document.getElementById('statement_start_date').value;
-                const endDate = document.getElementById('statement_end_date').value;
-                
-                if (!startDate || !endDate) {
-                    alert('Lütfen tarih aralığı seçin.');
-                    return;
-                }
-                
-                const btn = document.getElementById('btnDownloadPdf');
-                const originalHtml = btn.innerHTML;
-                btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Yükleniyor...';
-                btn.disabled = true;
-                
-                try {
-                    const formData = new FormData();
-                    formData.append('_token', '{{ csrf_token() }}');
-                    formData.append('start_date', startDate);
-                    formData.append('end_date', endDate);
-                    formData.append('action', 'download');
-                    
-                    const response = await fetch('{{ route('firms.statement', $firm) }}', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    // Content-Type kontrolü
-                    const contentType = response.headers.get('content-type');
-                    
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('PDF Error:', errorText);
-                        throw new Error('PDF oluşturulamadı: ' + response.status);
-                    }
-                    
-                    // Eğer JSON dönüyorsa hata var demektir
-                    if (contentType && contentType.includes('application/json')) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'Bilinmeyen hata');
-                    }
-                    
-                    const blob = await response.blob();
-                    
-                    // Blob boyutu kontrolü
-                    if (blob.size < 100) {
-                        throw new Error('PDF oluşturulamadı - dosya boş');
-                    }
-                    
-                    const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'hesap-ekstresi-{{ $firm->id }}-' + startDate.replace(/-/g, '') + '-' + endDate.replace(/-/g, '') + '.pdf';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    a.remove();
-                } catch (error) {
-                    alert('PDF indirirken hata oluştu: ' + error.message);
-                } finally {
-                    btn.innerHTML = originalHtml;
-                    btn.disabled = false;
-                }
-            }
-            
             // E-posta Gönder
             function sendStatementEmail() {
                 const email = document.getElementById('statement_send_to').value;
