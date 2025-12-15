@@ -27,7 +27,7 @@ class FirmStatementController extends Controller
 
         $initialBalance = $firm->transactions()
             ->where('date', '<', $start)
-            ->selectRaw('SUM(CASE WHEN type = "debit" THEN amount ELSE 0 END) as debit_sum, SUM(CASE WHEN type = "credit" THEN amount ELSE 0 END) as credit_sum')
+            ->selectRaw("SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END) as debit_sum, SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END) as credit_sum")
             ->first();
 
         $initial = ($initialBalance->debit_sum ?? 0) - ($initialBalance->credit_sum ?? 0);
