@@ -76,20 +76,37 @@ class SettingsController extends Controller
         ]);
 
         if ($request->hasFile('company_logo')) {
-            $file = $request->file('company_logo');
-            $mimeType = $file->getMimeType();
-            $contents = file_get_contents($file->getRealPath());
-            $base64 = 'data:' . $mimeType . ';base64,' . base64_encode($contents);
-            
-            Setting::setValue('company_logo_base64', $base64);
-            Setting::setValue('company_logo_version', (string) now()->timestamp);
-            
-            // Eski path bazlı logo'yu temizle
-            $oldLogo = Setting::getValue('company_logo_path');
-            if ($oldLogo && Storage::disk('public')->exists($oldLogo)) {
-                Storage::disk('public')->delete($oldLogo);
+            try {
+                $file = $request->file('company_logo');
+                
+                // Dosya boyutu kontrolü (max 500KB)
+                if ($file->getSize() > 512000) {
+                    return back()->withErrors(['company_logo' => 'Logo dosyası çok büyük. Maksimum 500KB olmalı.'])->withInput();
+                }
+                
+                $mimeType = $file->getMimeType();
+                
+                // Sadece resim dosyaları kabul et
+                if (!str_starts_with($mimeType, 'image/')) {
+                    return back()->withErrors(['company_logo' => 'Sadece resim dosyaları yüklenebilir.'])->withInput();
+                }
+                
+                $contents = file_get_contents($file->getRealPath());
+                $base64 = 'data:' . $mimeType . ';base64,' . base64_encode($contents);
+                
+                Setting::setValue('company_logo_base64', $base64);
+                Setting::setValue('company_logo_version', (string) now()->timestamp);
+                
+                // Eski path bazlı logo'yu temizle
+                $oldLogo = Setting::getValue('company_logo_path');
+                if ($oldLogo && Storage::disk('public')->exists($oldLogo)) {
+                    Storage::disk('public')->delete($oldLogo);
+                }
+                Setting::setValue('company_logo_path', '');
+            } catch (\Exception $e) {
+                Log::error('Logo yükleme hatası: ' . $e->getMessage());
+                return back()->withErrors(['company_logo' => 'Logo yüklenirken bir hata oluştu: ' . $e->getMessage()])->withInput();
             }
-            Setting::setValue('company_logo_path', '');
         }
 
         $keys = [
