@@ -83,7 +83,10 @@ class FirmStatementController extends Controller
         // PDF İndir
         if ($data['action'] === 'download') {
             $pdf = Pdf::loadView('firms.statement_pdf', $viewData)->setPaper('a4');
-            return $pdf->download($fileName);
+            
+            return response($pdf->output(), 200)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
         }
 
         // Yazdır - HTML olarak tarayıcıda aç + otomatik yazdır

@@ -282,7 +282,7 @@
                     <h6 class="mb-0">Hesap Ekstresi</h6>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('firms.statement', $firm) }}" method="POST" class="row g-2" id="statementForm" target="_blank">
+                    <form action="{{ route('firms.statement', $firm) }}" method="POST" class="row g-2" id="statementForm">
                         @csrf
                         <div class="col-6">
                             <label class="form-label small text-muted mb-1">Başlangıç</label>
@@ -301,23 +301,36 @@
                         </div>
                         <input type="hidden" name="action" id="statementAction" value="download">
                         <div class="col-4">
-                            <button type="submit" class="btn btn-outline-danger btn-sm w-100" onclick="document.getElementById('statementAction').value='download'; document.getElementById('statementForm').target='_blank';">
+                            <button type="submit" class="btn btn-outline-danger btn-sm w-100" onclick="setStatementAction('download')">
                                 <i class="bi bi-file-pdf me-1"></i>PDF
                             </button>
                         </div>
                         <div class="col-4">
-                            <button type="submit" class="btn btn-outline-primary btn-sm w-100" onclick="document.getElementById('statementAction').value='email'; document.getElementById('statementForm').target='_self';">
+                            <button type="submit" class="btn btn-outline-primary btn-sm w-100" onclick="setStatementAction('email')">
                                 <i class="bi bi-envelope me-1"></i>Gönder
                             </button>
                         </div>
                         <div class="col-4">
-                            <button type="submit" class="btn btn-outline-secondary btn-sm w-100" onclick="document.getElementById('statementAction').value='print'; document.getElementById('statementForm').target='_blank';">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm w-100" onclick="setStatementAction('print')">
                                 <i class="bi bi-printer me-1"></i>Yazdır
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
+            
+            <script>
+            function setStatementAction(action) {
+                var form = document.getElementById('statementForm');
+                document.getElementById('statementAction').value = action;
+                
+                if (action === 'print') {
+                    form.target = '_blank';
+                } else {
+                    form.target = '_self';
+                }
+            }
+            </script>
         </div>
 
         {{-- Sağ Kolon: Cari Hareketler --}}
