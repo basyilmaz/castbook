@@ -23,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // MySQL eski sürümler için string length sınırı
+        Schema::defaultStringLength(191);
         // Rate Limiting konfigürasyonu
         $this->configureRateLimiting();
         
