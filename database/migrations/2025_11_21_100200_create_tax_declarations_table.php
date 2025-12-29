@@ -21,7 +21,7 @@ return new class extends Migration {
             $table->text('notes')->nullable();
             $table->timestamps();
 
-            $table->unique(['firm_id', 'tax_form_id', 'period_start', 'period_end']);
+            $table->unique(['firm_id', 'tax_form_id', 'period_start', 'period_end'], 'tax_decl_unique');
         });
     }
 
