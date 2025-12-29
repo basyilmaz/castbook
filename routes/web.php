@@ -16,6 +16,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TaxDeclarationController;
 use App\Http\Controllers\TaxFormController;
+use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -148,6 +149,15 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('settings/notifications', [\App\Http\Controllers\NotificationSettingsController::class, 'edit'])->name('settings.notifications');
     Route::put('settings/notifications', [\App\Http\Controllers\NotificationSettingsController::class, 'update'])->name('settings.notifications.update');
     Route::post('settings/notifications/test', [\App\Http\Controllers\NotificationSettingsController::class, 'sendTest'])->name('settings.notifications.test');
+
+    // Güncelleme ve Yedekleme
+    Route::get('settings/updates', [UpdateController::class, 'index'])->name('settings.updates');
+    Route::post('settings/updates/backup-database', [UpdateController::class, 'backupDatabase'])->name('settings.updates.backup-database');
+    Route::post('settings/updates/backup-files', [UpdateController::class, 'backupFiles'])->name('settings.updates.backup-files');
+    Route::post('settings/updates/migration', [UpdateController::class, 'runMigration'])->name('settings.updates.migration');
+    Route::post('settings/updates/clear-cache', [UpdateController::class, 'clearCache'])->name('settings.updates.clear-cache');
+    Route::get('settings/updates/download/{filename}', [UpdateController::class, 'downloadBackup'])->name('settings.updates.download-backup');
+    Route::delete('settings/updates/delete/{filename}', [UpdateController::class, 'deleteBackup'])->name('settings.updates.delete-backup');
 
     Route::middleware('role:admin')->group(function () {
         Route::resource('users', UserController::class)->except(['show']);

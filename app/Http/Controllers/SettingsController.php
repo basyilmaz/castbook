@@ -38,6 +38,11 @@ class SettingsController extends Controller
     {
         $settings = Setting::query()->pluck('value', 'key');
         $paymentMethods = Setting::getPaymentMethods();
+        
+        // Güncelleme bilgileri
+        $updateService = app(\App\Services\UpdateService::class);
+        $versionInfo = $updateService->getVersionInfo();
+        $backups = $updateService->getBackupList();
 
         return view('settings.edit', [
             'settings' => $settings,
@@ -45,6 +50,8 @@ class SettingsController extends Controller
             'invoiceNotifyEnabled' => (bool) Setting::getValue('invoice_auto_notify', '0'),
             'invoiceNotifyRecipients' => Setting::getInvoiceNotificationRecipients(),
             'isAdmin' => auth()->user()?->isAdmin() ?? false,
+            'versionInfo' => $versionInfo,
+            'backups' => $backups,
         ]);
     }
 

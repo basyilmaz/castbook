@@ -40,6 +40,12 @@
                 Beyanname Yönetimi
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="updates-tab" data-bs-toggle="tab" data-bs-target="#updates" 
+                    type="button" role="tab" aria-controls="updates" aria-selected="false">
+                <i class="bi bi-arrow-repeat"></i> Güncelleme
+            </button>
+        </li>
         @endif
     </ul>
 
@@ -59,6 +65,11 @@
         {{-- Tax Management Tab --}}
         <div class="tab-pane fade" id="tax-management" role="tabpanel" aria-labelledby="tax-management-tab">
             @include('settings.tabs.tax-management')
+        </div>
+
+        {{-- Updates Tab --}}
+        <div class="tab-pane fade" id="updates" role="tabpanel" aria-labelledby="updates-tab">
+            @include('settings.tabs.updates', ['versionInfo' => $versionInfo ?? null, 'backups' => $backups ?? []])
         </div>
         @endif
     </div>
