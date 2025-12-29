@@ -13,7 +13,7 @@ return new class extends Migration {
             $table->string('reference_number')->nullable()->after('paid_at');
             
             // Unique constraint'i güncelle
-            $table->dropUnique(['firm_id', 'tax_form_id', 'period_start', 'period_end']);
+            $table->dropUnique('tax_decl_unique');
             $table->unique([
                 'firm_id',
                 'tax_form_id',
