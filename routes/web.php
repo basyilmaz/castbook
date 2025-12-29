@@ -6,6 +6,7 @@ use App\Http\Controllers\FirmController;
 use App\Http\Controllers\FirmPriceHistoryController;
 use App\Http\Controllers\FirmStatementController;
 use App\Http\Controllers\FirmTaxFormController;
+use App\Http\Controllers\InstallController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InvoiceExtraFieldController;
 use App\Http\Controllers\PasswordResetController;
@@ -17,6 +18,24 @@ use App\Http\Controllers\TaxDeclarationController;
 use App\Http\Controllers\TaxFormController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+
+// ==========================================
+// KURULUM ROUTE'LARI (Middleware yok)
+// ==========================================
+Route::prefix('install')->name('install.')->group(function () {
+    Route::get('/', [InstallController::class, 'index'])->name('index');
+    Route::get('/requirements', [InstallController::class, 'requirements'])->name('requirements');
+    Route::get('/database', [InstallController::class, 'database'])->name('database');
+    Route::post('/database', [InstallController::class, 'testDatabase'])->name('database.test');
+    Route::get('/migration', [InstallController::class, 'migration'])->name('migration');
+    Route::post('/migration', [InstallController::class, 'runMigration'])->name('migration.run');
+    Route::get('/admin', [InstallController::class, 'admin'])->name('admin');
+    Route::post('/admin', [InstallController::class, 'createAdmin'])->name('admin.create');
+    Route::get('/settings', [InstallController::class, 'settings'])->name('settings');
+    Route::post('/settings', [InstallController::class, 'saveSettings'])->name('settings.save');
+    Route::get('/complete', [InstallController::class, 'complete'])->name('complete');
+});
+
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [AuthController::class, 'showLoginForm'])->name('login');
