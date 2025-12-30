@@ -43,6 +43,11 @@ class SettingsController extends Controller
         $updateService = app(\App\Services\UpdateService::class);
         $versionInfo = $updateService->getVersionInfo();
         $backups = $updateService->getBackupList();
+        
+        // Lisans bilgileri
+        $licenseService = app(\App\Services\LicenseService::class);
+        $licenseInfo = $licenseService->getDisplayInfo();
+        $licenseTypes = \App\Services\LicenseService::LICENSE_TYPES;
 
         return view('settings.edit', [
             'settings' => $settings,
@@ -52,6 +57,8 @@ class SettingsController extends Controller
             'isAdmin' => auth()->user()?->isAdmin() ?? false,
             'versionInfo' => $versionInfo,
             'backups' => $backups,
+            'licenseInfo' => $licenseInfo,
+            'licenseTypes' => $licenseTypes,
         ]);
     }
 

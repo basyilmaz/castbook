@@ -46,6 +46,12 @@
                 <i class="bi bi-arrow-repeat"></i> Güncelleme
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="license-tab" data-bs-toggle="tab" data-bs-target="#license" 
+                    type="button" role="tab" aria-controls="license" aria-selected="false">
+                <i class="bi bi-shield-check"></i> Lisans
+            </button>
+        </li>
         @endif
     </ul>
 
@@ -70,6 +76,11 @@
         {{-- Updates Tab --}}
         <div class="tab-pane fade" id="updates" role="tabpanel" aria-labelledby="updates-tab">
             @include('settings.tabs.updates', ['versionInfo' => $versionInfo ?? null, 'backups' => $backups ?? []])
+        </div>
+
+        {{-- License Tab --}}
+        <div class="tab-pane fade" id="license" role="tabpanel" aria-labelledby="license-tab">
+            @include('settings.tabs.license', ['licenseInfo' => $licenseInfo ?? [], 'licenseTypes' => $licenseTypes ?? []])
         </div>
         @endif
     </div>

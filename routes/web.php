@@ -9,6 +9,7 @@ use App\Http\Controllers\FirmTaxFormController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InvoiceExtraFieldController;
+use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ReportController;
@@ -158,6 +159,12 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('settings/updates/clear-cache', [UpdateController::class, 'clearCache'])->name('settings.updates.clear-cache');
     Route::get('settings/updates/download/{filename}', [UpdateController::class, 'downloadBackup'])->name('settings.updates.download-backup');
     Route::delete('settings/updates/delete/{filename}', [UpdateController::class, 'deleteBackup'])->name('settings.updates.delete-backup');
+
+    // Lisans Yönetimi
+    Route::get('settings/license', [LicenseController::class, 'index'])->name('settings.license');
+    Route::post('settings/license/activate', [LicenseController::class, 'activate'])->name('settings.license.activate');
+    Route::delete('settings/license/deactivate', [LicenseController::class, 'deactivate'])->name('settings.license.deactivate');
+    Route::get('api/license/status', [LicenseController::class, 'status'])->name('api.license.status');
 
     Route::middleware('role:admin')->group(function () {
         Route::resource('users', UserController::class)->except(['show']);
