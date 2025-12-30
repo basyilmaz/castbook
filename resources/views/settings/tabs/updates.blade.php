@@ -88,7 +88,7 @@
                 <form action="{{ route('settings.updates.create-rollback') }}" method="POST">
                     @csrf
                     <button type="submit" class="btn btn-secondary w-100">
-                        <i class="bi bi-save"></i> Rollback Noktası
+                        <i class="bi bi-save"></i> Geri Yükleme Noktası
                     </button>
                 </form>
             </div>
@@ -96,9 +96,9 @@
                 <form action="{{ route('settings.updates.rollback') }}" method="POST">
                     @csrf
                     <button type="submit" class="btn btn-danger w-100" 
-                            onclick="return confirm('Son rollback noktasına geri dönülecek. Devam etmek istiyor musunuz?')"
+                            onclick="return confirm('Son geri yükleme noktasına dönülecek. Devam etmek istiyor musunuz?')"
                             {{ empty($rollbacks ?? []) ? 'disabled' : '' }}>
-                        <i class="bi bi-arrow-counterclockwise"></i> Rollback
+                        <i class="bi bi-arrow-counterclockwise"></i> Geri Yükle
                     </button>
                 </form>
             </div>
@@ -125,9 +125,9 @@
             </div>
         </div>
 
-        {{-- Rollback Noktaları --}}
+        {{-- Geri Yükleme Noktaları --}}
         @if(!empty($rollbacks ?? []))
-        <h6 class="mb-3"><i class="bi bi-clock-history"></i> Rollback Noktaları</h6>
+        <h6 class="mb-3"><i class="bi bi-clock-history"></i> Geri Yükleme Noktaları</h6>
         <div class="table-responsive mb-4">
             <table class="table table-sm table-hover">
                 <thead>
