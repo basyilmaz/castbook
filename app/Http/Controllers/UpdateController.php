@@ -46,14 +46,14 @@ class UpdateController extends Controller
         $downloadUrl = $request->input('download_url');
         
         if (!$downloadUrl) {
-            return redirect()->route('settings.updates')
+            return redirect()->route('settings.edit', ['tab' => 'updates'])
                 ->with('error', 'İndirme URL\'i bulunamadı.');
         }
 
         // ZIP indir
         $downloadResult = $this->updateService->downloadUpdate($downloadUrl);
         if (!$downloadResult['success']) {
-            return redirect()->route('settings.updates')
+            return redirect()->route('settings.edit', ['tab' => 'updates'])
                 ->with('error', $downloadResult['message']);
         }
 
@@ -61,11 +61,11 @@ class UpdateController extends Controller
         $applyResult = $this->updateService->applyUpdate($downloadResult['path']);
         
         if ($applyResult['success']) {
-            return redirect()->route('settings.updates')
+            return redirect()->route('settings.edit', ['tab' => 'updates'])
                 ->with('success', 'Güncelleme başarıyla tamamlandı!');
         }
 
-        return redirect()->route('settings.updates')
+        return redirect()->route('settings.edit', ['tab' => 'updates'])
             ->with('error', $applyResult['message'])
             ->with('update_steps', $applyResult['steps'] ?? []);
     }
@@ -78,11 +78,11 @@ class UpdateController extends Controller
         $result = $this->updateService->rollback();
 
         if ($result['success']) {
-            return redirect()->route('settings.updates')
+            return redirect()->route('settings.edit', ['tab' => 'updates'])
                 ->with('success', $result['message']);
         }
 
-        return redirect()->route('settings.updates')
+        return redirect()->route('settings.edit', ['tab' => 'updates'])
             ->with('error', $result['message']);
     }
 
@@ -94,11 +94,11 @@ class UpdateController extends Controller
         $result = $this->updateService->createRollbackPoint();
 
         if ($result['success']) {
-            return redirect()->route('settings.updates')
+            return redirect()->route('settings.edit', ['tab' => 'updates'])
                 ->with('success', "Rollback noktası oluşturuldu: {$result['filename']}");
         }
 
-        return redirect()->route('settings.updates')
+        return redirect()->route('settings.edit', ['tab' => 'updates'])
             ->with('error', $result['message']);
     }
 
@@ -110,11 +110,11 @@ class UpdateController extends Controller
         $result = $this->updateService->backupDatabase();
 
         if ($result['success']) {
-            return redirect()->route('settings.updates')
+            return redirect()->route('settings.edit', ['tab' => 'updates'])
                 ->with('success', "Veritabanı yedeklendi: {$result['filename']} ({$result['size']})");
         }
 
-        return redirect()->route('settings.updates')
+        return redirect()->route('settings.edit', ['tab' => 'updates'])
             ->with('error', $result['message']);
     }
 
@@ -126,11 +126,11 @@ class UpdateController extends Controller
         $result = $this->updateService->backupFiles();
 
         if ($result['success']) {
-            return redirect()->route('settings.updates')
+            return redirect()->route('settings.edit', ['tab' => 'updates'])
                 ->with('success', "Dosyalar yedeklendi: {$result['filename']} ({$result['size']})");
         }
 
-        return redirect()->route('settings.updates')
+        return redirect()->route('settings.edit', ['tab' => 'updates'])
             ->with('error', $result['message']);
     }
 
@@ -142,11 +142,11 @@ class UpdateController extends Controller
         $result = $this->updateService->runMigrations();
 
         if ($result['success']) {
-            return redirect()->route('settings.updates')
+            return redirect()->route('settings.edit', ['tab' => 'updates'])
                 ->with('success', 'Migration başarıyla çalıştırıldı.');
         }
 
-        return redirect()->route('settings.updates')
+        return redirect()->route('settings.edit', ['tab' => 'updates'])
             ->with('error', $result['message']);
     }
 
@@ -158,11 +158,11 @@ class UpdateController extends Controller
         $result = $this->updateService->clearCache();
 
         if ($result['success']) {
-            return redirect()->route('settings.updates')
+            return redirect()->route('settings.edit', ['tab' => 'updates'])
                 ->with('success', 'Önbellek temizlendi.');
         }
 
-        return redirect()->route('settings.updates')
+        return redirect()->route('settings.edit', ['tab' => 'updates'])
             ->with('error', $result['message']);
     }
 
@@ -177,7 +177,7 @@ class UpdateController extends Controller
             return Response::download($path, $filename);
         }
 
-        return redirect()->route('settings.updates')
+        return redirect()->route('settings.edit', ['tab' => 'updates'])
             ->with('error', 'Yedekleme dosyası bulunamadı.');
     }
 
@@ -187,11 +187,11 @@ class UpdateController extends Controller
     public function deleteBackup(string $filename)
     {
         if ($this->updateService->deleteBackup($filename)) {
-            return redirect()->route('settings.updates')
+            return redirect()->route('settings.edit', ['tab' => 'updates'])
                 ->with('success', 'Yedekleme silindi.');
         }
 
-        return redirect()->route('settings.updates')
+        return redirect()->route('settings.edit', ['tab' => 'updates'])
             ->with('error', 'Yedekleme silinemedi.');
     }
 }
