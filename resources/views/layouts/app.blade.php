@@ -479,8 +479,10 @@
     <footer class="mt-auto py-3 text-center text-muted" style="background: rgba(0,0,0,0.02);">
         <div class="container">
             <small>
-                {{ config('app.name', 'CastBook') }} v{{ config('app.version', '2.0.0') }}
+                <strong>{{ config('app.name', 'CastBook') }}</strong> v{{ config('app.version', '2.9.0') }}
                 &copy; {{ date('Y') }}
+                <span class="mx-2">|</span>
+                Developed by <a href="https://castintech.com" target="_blank" rel="noopener" class="text-decoration-none">CastinTech</a>
             </small>
         </div>
     </footer>
