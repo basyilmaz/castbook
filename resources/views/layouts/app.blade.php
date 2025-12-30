@@ -210,6 +210,14 @@
                     <i class="bi bi-search fs-5"></i>
                 </button>
                 
+                {{-- Tema Toggle --}}
+                <button type="button" class="btn btn-link text-white p-2" 
+                        id="themeToggle"
+                        title="Tema Değiştir">
+                    <i class="bi bi-sun-fill fs-5" id="themeIconLight"></i>
+                    <i class="bi bi-moon-fill fs-5 d-none" id="themeIconDark"></i>
+                </button>
+                
                 {{-- Bildirim Zili --}}
                 <div class="dropdown" id="notificationDropdown">
                     <button class="btn btn-link text-white position-relative p-2" 
@@ -997,5 +1005,84 @@
         text-align: center;
     }
     </style>
+
+<script>
+// Tema Toggle
+(function() {
+    const THEME_KEY = 'theme_preference';
+    const themeToggle = document.getElementById('themeToggle');
+    const iconLight = document.getElementById('themeIconLight');
+    const iconDark = document.getElementById('themeIconDark');
+    
+    function applyTheme(theme) {
+        const isDark = theme === 'dark';
+        
+        // Bootstrap tema özelliği
+        document.documentElement.dataset.bsTheme = theme;
+        document.body.dataset.bsTheme = theme;
+        
+        // Body sınıfları
+        if (isDark) {
+            document.body.classList.add('bg-dark', 'text-white');
+            document.body.classList.remove('bg-light');
+        } else {
+            document.body.classList.remove('bg-dark', 'text-white');
+            document.body.classList.add('bg-light');
+        }
+        
+        // İkon değiştir
+        if (iconLight && iconDark) {
+            iconLight.classList.toggle('d-none', isDark);
+            iconDark.classList.toggle('d-none', !isDark);
+        }
+    }
+    
+    function getPreferredTheme() {
+        const stored = localStorage.getItem(THEME_KEY);
+        if (stored) return stored;
+        
+        // Sistem tercihini kontrol et
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            return 'dark';
+        }
+        return 'light';
+    }
+    
+    // Sayfa yüklendiğinde temayı uygula
+    document.addEventListener('DOMContentLoaded', function() {
+        const theme = getPreferredTheme();
+        applyTheme(theme);
+        
+        // Toggle buton
+        if (themeToggle) {
+            themeToggle.addEventListener('click', function() {
+                const current = document.documentElement.dataset.bsTheme || 'light';
+                const newTheme = current === 'dark' ? 'light' : 'dark';
+                
+                localStorage.setItem(THEME_KEY, newTheme);
+                applyTheme(newTheme);
+            });
+        }
+        
+        // Sistem tercihi değişirse dinle
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                // Sadece kullanıcı manuel seçim yapmamışsa değiştir
+                if (!localStorage.getItem(THEME_KEY)) {
+                    applyTheme(e.matches ? 'dark' : 'light');
+                }
+            });
+        }
+    });
+    
+    // Sayfa yüklenmeden önce tema flash'ını engelle
+    const earlyTheme = localStorage.getItem(THEME_KEY) || 
+        (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.dataset.bsTheme = earlyTheme;
+    if (earlyTheme === 'dark') {
+        document.documentElement.classList.add('bg-dark');
+    }
+})();
+</script>
 </body>
 </html>
