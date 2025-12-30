@@ -43,6 +43,7 @@ class SettingsController extends Controller
         $updateService = app(\App\Services\UpdateService::class);
         $versionInfo = $updateService->getVersionInfo();
         $backups = $updateService->getBackupList();
+        $rollbacks = $updateService->getRollbackList();
         
         // Lisans bilgileri
         $licenseService = app(\App\Services\LicenseService::class);
@@ -57,6 +58,7 @@ class SettingsController extends Controller
             'isAdmin' => auth()->user()?->isAdmin() ?? false,
             'versionInfo' => $versionInfo,
             'backups' => $backups,
+            'rollbacks' => $rollbacks,
             'licenseInfo' => $licenseInfo,
             'licenseTypes' => $licenseTypes,
         ]);

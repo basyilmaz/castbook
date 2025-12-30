@@ -23,8 +23,83 @@ class UpdateController extends Controller
     {
         $versionInfo = $this->updateService->getVersionInfo();
         $backups = $this->updateService->getBackupList();
+        $rollbacks = $this->updateService->getRollbackList();
 
-        return view('settings.tabs.updates', compact('versionInfo', 'backups'));
+        return view('settings.tabs.updates', compact('versionInfo', 'backups', 'rollbacks'));
+    }
+
+    /**
+     * Güncelleme kontrolü (AJAX)
+     */
+    public function checkUpdate()
+    {
+        $result = $this->updateService->forceCheckForUpdates();
+        
+        return response()->json($result);
+    }
+
+    /**
+     * Güncelleme indir ve uygula
+     */
+    public function applyUpdate(Request $request)
+    {
+        $downloadUrl = $request->input('download_url');
+        
+        if (!$downloadUrl) {
+            return redirect()->route('settings.updates')
+                ->with('error', 'İndirme URL\'i bulunamadı.');
+        }
+
+        // ZIP indir
+        $downloadResult = $this->updateService->downloadUpdate($downloadUrl);
+        if (!$downloadResult['success']) {
+            return redirect()->route('settings.updates')
+                ->with('error', $downloadResult['message']);
+        }
+
+        // Güncellemeyi uygula
+        $applyResult = $this->updateService->applyUpdate($downloadResult['path']);
+        
+        if ($applyResult['success']) {
+            return redirect()->route('settings.updates')
+                ->with('success', 'Güncelleme başarıyla tamamlandı!');
+        }
+
+        return redirect()->route('settings.updates')
+            ->with('error', $applyResult['message'])
+            ->with('update_steps', $applyResult['steps'] ?? []);
+    }
+
+    /**
+     * Rollback uygula
+     */
+    public function rollback()
+    {
+        $result = $this->updateService->rollback();
+
+        if ($result['success']) {
+            return redirect()->route('settings.updates')
+                ->with('success', $result['message']);
+        }
+
+        return redirect()->route('settings.updates')
+            ->with('error', $result['message']);
+    }
+
+    /**
+     * Rollback noktası oluştur
+     */
+    public function createRollback()
+    {
+        $result = $this->updateService->createRollbackPoint();
+
+        if ($result['success']) {
+            return redirect()->route('settings.updates')
+                ->with('success', "Rollback noktası oluşturuldu: {$result['filename']}");
+        }
+
+        return redirect()->route('settings.updates')
+            ->with('error', $result['message']);
     }
 
     /**

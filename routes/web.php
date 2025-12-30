@@ -153,6 +153,10 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Güncelleme ve Yedekleme
     Route::get('settings/updates', [UpdateController::class, 'index'])->name('settings.updates');
+    Route::get('settings/updates/check', [UpdateController::class, 'checkUpdate'])->name('settings.updates.check');
+    Route::post('settings/updates/apply', [UpdateController::class, 'applyUpdate'])->name('settings.updates.apply');
+    Route::post('settings/updates/rollback', [UpdateController::class, 'rollback'])->name('settings.updates.rollback');
+    Route::post('settings/updates/create-rollback', [UpdateController::class, 'createRollback'])->name('settings.updates.create-rollback');
     Route::post('settings/updates/backup-database', [UpdateController::class, 'backupDatabase'])->name('settings.updates.backup-database');
     Route::post('settings/updates/backup-files', [UpdateController::class, 'backupFiles'])->name('settings.updates.backup-files');
     Route::post('settings/updates/migration', [UpdateController::class, 'runMigration'])->name('settings.updates.migration');
