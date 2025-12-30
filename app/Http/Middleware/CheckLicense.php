@@ -42,9 +42,17 @@ class CheckLicense
             session()->flash('license_warning', $license['message'] ?? 'Lisans geçersiz veya süresi dolmuş.');
         }
 
-        // Trial uyarısı
-        if (($license['is_trial'] ?? false) && ($license['days_remaining'] ?? 0) <= 3) {
-            session()->flash('license_warning', "Deneme süreniz {$license['days_remaining']} gün içinde sona erecek.");
+        // Lisans bitiş uyarısı (7 gün kala)
+        if ($license['valid'] && isset($license['expires_at']) && $license['expires_at']) {
+            $daysRemaining = now()->diffInDays($license['expires_at'], false);
+            
+            if ($daysRemaining <= 7 && $daysRemaining > 0) {
+                $isTrial = $license['is_trial'] ?? false;
+                $message = $isTrial 
+                    ? "Deneme süreniz {$daysRemaining} gün içinde sona erecek. Lisans satın alın."
+                    : "Lisansınızın süresi {$daysRemaining} gün içinde dolacak. Yenileyin.";
+                session()->flash('license_warning', $message);
+            }
         }
 
         // View'a lisans bilgisini paylaş

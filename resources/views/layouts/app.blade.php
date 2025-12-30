@@ -443,6 +443,25 @@
             </div>
         </div>
     </nav>
+    
+    {{-- Lisans Uyarısı (Dark Mode Uyumlu) --}}
+    @if(session('license_warning'))
+    <div class="alert mb-0 rounded-0 py-2 border-0" role="alert"
+         style="background: linear-gradient(90deg, #f59e0b, #d97706); color: #1f2937;">
+        <div class="container d-flex align-items-center flex-wrap gap-2">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span class="fw-semibold">{{ session('license_warning') }}</span>
+            <a href="{{ route('settings.edit') }}#license-tab" 
+               class="btn btn-sm btn-dark ms-auto">
+                <i class="bi bi-key"></i> Lisans Yönetimi
+            </a>
+            <button type="button" class="btn-close btn-close-dark" 
+                    onclick="this.closest('.alert').remove()" 
+                    aria-label="Kapat"></button>
+        </div>
+    </div>
+    @endif
+
     <main class="container py-4">
 
         @yield('content')
