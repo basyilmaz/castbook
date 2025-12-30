@@ -527,38 +527,73 @@ class UpdateService
         $filepath = $this->backupPath . '/' . $filename;
 
         try {
-            $tables = DB::select('SHOW TABLES');
-            $dbName = config('database.connections.mysql.database');
-            $key = "Tables_in_{$dbName}";
-            
+            $driver = config('database.default');
             $sql = "-- CastBook Database Backup\n";
             $sql .= "-- Generated: " . date('Y-m-d H:i:s') . "\n";
-            $sql .= "-- Version: " . $this->getCurrentVersion() . "\n\n";
-            $sql .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
+            $sql .= "-- Version: " . $this->getCurrentVersion() . "\n";
+            $sql .= "-- Driver: " . $driver . "\n\n";
 
-            foreach ($tables as $table) {
-                $tableName = $table->$key;
+            if ($driver === 'sqlite') {
+                // SQLite yedekleme
+                $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
                 
-                $createTable = DB::select("SHOW CREATE TABLE `{$tableName}`");
-                $sql .= "DROP TABLE IF EXISTS `{$tableName}`;\n";
-                $sql .= $createTable[0]->{'Create Table'} . ";\n\n";
-                
-                $rows = DB::table($tableName)->get();
-                foreach ($rows as $row) {
-                    $values = collect((array) $row)->map(function ($value) {
-                        if ($value === null) {
-                            return 'NULL';
-                        }
-                        return "'" . addslashes($value) . "'";
-                    })->implode(', ');
+                foreach ($tables as $table) {
+                    $tableName = $table->name;
                     
-                    $columns = collect(array_keys((array) $row))->map(fn($c) => "`{$c}`")->implode(', ');
-                    $sql .= "INSERT INTO `{$tableName}` ({$columns}) VALUES ({$values});\n";
+                    // Tablo oluşturma SQL'i
+                    $createSql = DB::selectOne("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", [$tableName]);
+                    if ($createSql && $createSql->sql) {
+                        $sql .= "DROP TABLE IF EXISTS `{$tableName}`;\n";
+                        $sql .= $createSql->sql . ";\n\n";
+                    }
+                    
+                    // Verileri al
+                    $rows = DB::table($tableName)->get();
+                    foreach ($rows as $row) {
+                        $values = collect((array) $row)->map(function ($value) {
+                            if ($value === null) {
+                                return 'NULL';
+                            }
+                            return "'" . addslashes($value) . "'";
+                        })->implode(', ');
+                        
+                        $columns = collect(array_keys((array) $row))->map(fn($c) => "`{$c}`")->implode(', ');
+                        $sql .= "INSERT INTO `{$tableName}` ({$columns}) VALUES ({$values});\n";
+                    }
+                    $sql .= "\n";
                 }
-                $sql .= "\n";
-            }
+            } else {
+                // MySQL yedekleme
+                $tables = DB::select('SHOW TABLES');
+                $dbName = config('database.connections.mysql.database');
+                $key = "Tables_in_{$dbName}";
+                
+                $sql .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
 
-            $sql .= "SET FOREIGN_KEY_CHECKS=1;\n";
+                foreach ($tables as $table) {
+                    $tableName = $table->$key;
+                    
+                    $createTable = DB::select("SHOW CREATE TABLE `{$tableName}`");
+                    $sql .= "DROP TABLE IF EXISTS `{$tableName}`;\n";
+                    $sql .= $createTable[0]->{'Create Table'} . ";\n\n";
+                    
+                    $rows = DB::table($tableName)->get();
+                    foreach ($rows as $row) {
+                        $values = collect((array) $row)->map(function ($value) {
+                            if ($value === null) {
+                                return 'NULL';
+                            }
+                            return "'" . addslashes($value) . "'";
+                        })->implode(', ');
+                        
+                        $columns = collect(array_keys((array) $row))->map(fn($c) => "`{$c}`")->implode(', ');
+                        $sql .= "INSERT INTO `{$tableName}` ({$columns}) VALUES ({$values});\n";
+                    }
+                    $sql .= "\n";
+                }
+
+                $sql .= "SET FOREIGN_KEY_CHECKS=1;\n";
+            }
             
             File::put($filepath, $sql);
 
