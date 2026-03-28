@@ -63,28 +63,30 @@ class GenerateTaxDeclarations extends Command
                 $dueDate = $this->calculateDueDate($end, $dueDay, $taxForm->frequency);
             }
 
-            $exists = TaxDeclaration::query()
-                ->where('firm_id', $item->firm_id)
-                ->where('tax_form_id', $taxForm->id)
-                ->whereDate('period_start', $start)
-                ->whereDate('period_end', $end)
-                ->exists();
+            try {
+                $declaration = TaxDeclaration::firstOrCreate([
+                    'firm_id' => $item->firm_id,
+                    'tax_form_id' => $taxForm->id,
+                    'period_start' => $start->format('Y-m-d H:i:s'),
+                    'period_end' => $end->format('Y-m-d H:i:s'),
+                    'declaration_type' => 'normal',
+                    'sequence_number' => 1,
+                ], [
+                    'period_label' => $label,
+                    'due_date' => $dueDate,
+                    'status' => 'pending',
+                ]);
 
-            if ($exists) {
-                continue;
+                if ($declaration->wasRecentlyCreated) {
+                    $created++;
+                }
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Eğer double-run vb. sebepli eşzamanlı bir 1062 (Unique) hatası gelirse, atla.
+                if ($e->errorInfo[1] == 1062 || $e->getCode() == 23000) {
+                    continue;
+                }
+                throw $e;
             }
-
-            TaxDeclaration::create([
-                'firm_id' => $item->firm_id,
-                'tax_form_id' => $taxForm->id,
-                'period_start' => $start,
-                'period_end' => $end,
-                'period_label' => $label,
-                'due_date' => $dueDate,
-                'status' => 'pending',
-            ]);
-
-            $created++;
         }
 
         $this->info(sprintf(

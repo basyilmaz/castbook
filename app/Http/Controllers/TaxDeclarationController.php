@@ -300,32 +300,32 @@ class TaxDeclarationController extends Controller
             return 'skipped';
         }
 
-        // Zaten var mı kontrol et
-        $exists = TaxDeclaration::where('firm_id', $firm->id)
-            ->where('tax_form_id', $taxForm->id)
-            ->where('period_start', $periodRange['start'])
-            ->where('period_end', $periodRange['end'])
-            ->exists();
-
-        if ($exists) {
-            return 'skipped';
-        }
-
         // Son tarihi hesapla
         $dueDate = $taxForm->getOfficialDueDate($periodRange['end'])
             ?? $periodRange['end']->copy()->addMonth()->day($taxForm->default_due_day ?? 26);
 
-        TaxDeclaration::create([
-            'firm_id' => $firm->id,
-            'tax_form_id' => $taxForm->id,
-            'period_start' => $periodRange['start'],
-            'period_end' => $periodRange['end'],
-            'period_label' => $periodRange['label'],
-            'due_date' => $dueDate,
-            'status' => 'pending',
-        ]);
+        try {
+            $declaration = TaxDeclaration::firstOrCreate([
+                'firm_id' => $firm->id,
+                'tax_form_id' => $taxForm->id,
+                'period_start' => $periodRange['start']->format('Y-m-d H:i:s'),
+                'period_end' => $periodRange['end']->format('Y-m-d H:i:s'),
+                'declaration_type' => 'normal',
+                'sequence_number' => 1,
+            ], [
+                'period_label' => $periodRange['label'],
+                'due_date' => $dueDate,
+                'status' => 'pending',
+            ]);
 
-        return 'created';
+            return $declaration->wasRecentlyCreated ? 'created' : 'skipped';
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Eğer race condition / double-click durumunda yine de 1062 (Unique) hatasına düşerse, atla
+            if ($e->errorInfo[1] == 1062 || $e->getCode() == 23000) {
+                return 'skipped';
+            }
+            throw $e;
+        }
     }
 
     /**
