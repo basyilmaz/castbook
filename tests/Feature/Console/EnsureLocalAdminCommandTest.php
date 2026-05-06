@@ -3,36 +3,13 @@
 namespace Tests\Feature\Console;
 
 use App\Models\User;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class EnsureLocalAdminCommandTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->rememberToken();
-            $table->string('role')->default('user');
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-        });
-    }
-
-    protected function tearDown(): void
-    {
-        Schema::dropIfExists('users');
-
-        parent::tearDown();
-    }
+    use RefreshDatabase;
 
     public function test_creates_admin_when_not_exists(): void
     {
