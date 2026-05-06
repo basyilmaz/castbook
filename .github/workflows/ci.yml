@@ -71,7 +71,17 @@ jobs:
     needs: build-test
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
+      - name: Deploy via Railway (if RAILWAY_TOKEN configured)
+        if: ${{ secrets.RAILWAY_TOKEN != '' }}
+        run: |
+          curl -s -X POST https://backboard.railway.com/graphql/v2 \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"mutation { serviceInstanceRedeploy(serviceId: \"9cc81025-306d-4405-85e6-7640a7926394\", environmentId: \"15b72072-43b8-44d3-8dae-498bac393eb1\") }"}' \
+            && echo "Railway redeploy triggered"
+
+      - name: Deploy via SSH (if DEPLOY_HOST configured)
+        if: ${{ secrets.DEPLOY_HOST != '' }}
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
