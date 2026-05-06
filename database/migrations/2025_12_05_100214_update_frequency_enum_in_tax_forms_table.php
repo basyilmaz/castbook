@@ -21,7 +21,12 @@ return new class extends Migration
         // SQLite doesn't support ALTER COLUMN, so we need to recreate the table
         DB::statement('DROP TABLE IF EXISTS tax_forms_backup');
         DB::statement('CREATE TABLE tax_forms_backup AS SELECT * FROM tax_forms');
-        
+
+        // MySQL: disable FK checks so referenced table can be dropped
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        }
+
         Schema::dropIfExists('tax_forms');
         
         Schema::create('tax_forms', function (Blueprint $table) {
@@ -40,6 +45,11 @@ return new class extends Migration
         // Restore data
         DB::statement('INSERT INTO tax_forms SELECT * FROM tax_forms_backup');
         DB::statement('DROP TABLE tax_forms_backup');
+
+        // MySQL: re-enable FK checks
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        }
     }
 
     public function down(): void
@@ -52,7 +62,11 @@ return new class extends Migration
         // Revert back to monthly only
         DB::statement('DROP TABLE IF EXISTS tax_forms_backup');
         DB::statement('CREATE TABLE tax_forms_backup AS SELECT * FROM tax_forms');
-        
+
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        }
+
         Schema::dropIfExists('tax_forms');
         
         Schema::create('tax_forms', function (Blueprint $table) {
@@ -70,5 +84,9 @@ return new class extends Migration
         
         DB::statement('INSERT INTO tax_forms SELECT * FROM tax_forms_backup WHERE frequency = "monthly"');
         DB::statement('DROP TABLE tax_forms_backup');
+
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        }
     }
 };
