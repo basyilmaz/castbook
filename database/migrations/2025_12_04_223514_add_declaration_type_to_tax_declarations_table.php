@@ -11,9 +11,10 @@ return new class extends Migration {
             $table->string('declaration_type')->default('normal')->after('period_label');
             $table->integer('sequence_number')->default(1)->after('declaration_type');
             $table->string('reference_number')->nullable()->after('paid_at');
-            
-            // Unique constraint'i güncelle
-            $table->dropUnique('tax_decl_unique');
+        });
+
+        Schema::table('tax_declarations', function (Blueprint $table) {
+            // Yeni unique constraint önce eklenir (FK için kullanılan index korunur)
             $table->unique([
                 'firm_id',
                 'tax_form_id',
@@ -22,6 +23,9 @@ return new class extends Migration {
                 'declaration_type',
                 'sequence_number'
             ], 'unique_tax_declaration');
+
+            // Eski constraint sonra kaldırılır (MySQL FK kısıtlaması nedeniyle sıra önemlidir)
+            $table->dropUnique('tax_decl_unique');
         });
     }
 

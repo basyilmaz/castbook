@@ -119,6 +119,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | License API URL
+    |--------------------------------------------------------------------------
+    |
+    | URL for remote license validation API. When set, the application will
+    | validate licenses against the CastBook licensing server.
+    |
+    */
+
+    'license_api_url' => env('LICENSE_API_URL', 'https://castbook.castintech.com/api/v1/license'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Maintenance Mode Driver
     |--------------------------------------------------------------------------
     |

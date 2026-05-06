@@ -56,7 +56,7 @@
                     <div class="card login-card shadow-lg border-0">
                         <div class="login-header">
                             <h3><i class="bi bi-book me-2"></i>{{ config('app.name', 'CastBook') }}</h3>
-                            <p>Muhasebe Takip Sistemi</p>
+                            <p>{{ __('Muhasebe & Fatura Yönetimi') }}</p>
                         </div>
                         <div class="card-body p-4">
                             @if(session('status'))
