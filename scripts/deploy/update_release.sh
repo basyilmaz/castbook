@@ -1,43 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: ./scripts/deploy/update_release.sh v1.2.0
-# Requires: deploy user with git access, composer, npm, php-cli.
+# Usage: ./scripts/deploy/update_release.sh [git-ref]
+# Hostinger shared hosting deployment (~/apps/castbook)
+# Note: Node/npm not available on server — frontend assets must be pre-built and committed.
 
 GIT_REF="${1:-main}"
-BASE_DIR="/var/www/castbook"
-RELEASES_DIR="${BASE_DIR}/releases"
-TIMESTAMP="$(date +%Y-%m-%d_%H%M%S)"
-RELEASE_DIR="${RELEASES_DIR}/${TIMESTAMP}"
+APP_DIR="${HOME}/apps/castbook"
 
-echo ">>> Cloning ${GIT_REF} into ${RELEASE_DIR}"
-mkdir -p "${RELEASES_DIR}"
-git clone --depth=1 --branch "${GIT_REF}" git@github.com:yourorg/castbook.git "${RELEASE_DIR}"
+echo ">>> Deploying ${GIT_REF} to ${APP_DIR}"
+cd "${APP_DIR}"
 
-cd "${RELEASE_DIR}"
+echo ">>> Fetching latest code"
+git fetch --all --tags --prune
+git checkout --force "${GIT_REF}"
 
-echo ">>> Installing composer dependencies"
-composer install --no-dev --prefer-dist --optimize-autoloader
+echo ">>> Installing PHP dependencies (production)"
+composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
-echo ">>> Copying shared environment and storage links"
-cp "${BASE_DIR}/shared/.env" .env
-ln -snf "${BASE_DIR}/shared/storage" "${RELEASE_DIR}/storage"
-mkdir -p "${BASE_DIR}/shared/public/uploads"
-ln -snf "${BASE_DIR}/shared/public/uploads" "${RELEASE_DIR}/public/uploads"
-
-echo ">>> Running migrations and optimizations"
+echo ">>> Running database migrations"
 php artisan migrate --force
+
+echo ">>> Clearing and rebuilding caches"
 php artisan config:cache
 php artisan route:cache
-
-echo ">>> Building frontend assets"
-npm ci
-npm run build
-
-echo ">>> Activating new release"
-ln -snf "${RELEASE_DIR}" "${BASE_DIR}/current"
+php artisan view:cache
+php artisan event:cache || true
 
 echo ">>> Restarting queue workers"
 php artisan queue:restart || true
 
-echo "Deployment complete. Verify application health and logs."
+echo ">>> Deployment complete: ${GIT_REF} @ $(date)"
+echo ">>> App URL: $(php artisan tinker --execute="echo config('app.url');" 2>/dev/null || echo 'see .env APP_URL')"

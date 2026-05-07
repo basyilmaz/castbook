@@ -70,26 +70,15 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build-test
     runs-on: ubuntu-latest
-    env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
     steps:
-      - name: Deploy via Railway (if RAILWAY_TOKEN configured)
-        if: env.RAILWAY_TOKEN != ''
-        run: |
-          curl -s -X POST https://backboard.railway.com/graphql/v2 \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{"query":"mutation { serviceInstanceRedeploy(serviceId: \"9cc81025-306d-4405-85e6-7640a7926394\", environmentId: \"15b72072-43b8-44d3-8dae-498bac393eb1\") }"}' \
-            && echo "Railway redeploy triggered"
-
-      - name: Deploy via SSH (if DEPLOY_HOST configured)
-        if: env.DEPLOY_HOST != ''
-        uses: appleboy/ssh-action@v0.1.7
+      # Frontend assets are committed to git (public/build/ is tracked),
+      # so no npm build step is needed on the server.
+      - name: Deploy to Hostinger via SSH
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
+          port: 65002
           script: |
-            cd /var/www/castbook/current || cd /var/www/castbook
-            bash ./scripts/deploy/update_release.sh ${{ github.ref_name }}
+            bash ~/apps/castbook/scripts/deploy/update_release.sh ${{ github.ref_name }}
