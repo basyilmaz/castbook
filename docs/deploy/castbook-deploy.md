@@ -1,6 +1,9 @@
-# Castbook Production Deploy Planı
+# CastBook Production Deploy Kılavuzu
 
-Bu doküman `castbook.castamon.com` alan adı üzerinden prod ortamına çıkış için DNS, sürümleme ve güncelleme akışını özetler.
+> ⚠️ Bu dosya Hostinger shared hosting kurulumu için güncellenmiştir (Mayıs 2026).
+> Eski Railway/VPS konfigürasyonu artık geçerli değil.
+
+Daha fazla detay: [`docs/wiki/systems/deployment.md`](../wiki/systems/deployment.md)
 
 ## 1. DNS Hızlı Kurulum
 
